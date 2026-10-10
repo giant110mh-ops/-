@@ -1252,8 +1252,19 @@ function parseIsoDate(s){
   return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
 }
 
-function buildInventoryWorkbook(ExcelJS, status, items){
+// One sheet per list, in the same order as the original workbook.
+const XL_SHEET_ORDER = ['active', 'disposed', 'pending'];
+
+function buildInventoryWorkbook(ExcelJS, sortValue){
   const wb = new ExcelJS.Workbook();
+  XL_SHEET_ORDER.forEach(status => {
+    const items = sortItems(state.items.filter(r => r.status === status), sortValue);
+    addInventorySheet(wb, status, items);
+  });
+  return wb;
+}
+
+function addInventorySheet(wb, status, items){
   const ws = wb.addWorksheet(STATUS_LABEL[status], {views: [{state: 'frozen', ySplit: 2}]});
   ws.columns = XL_COLUMNS.map(c => ({width: c.width}));
   const headers = ['試薬名 (日本語)', 'reagent name', 'CAS', 'QRコード', '商品コード', '容量', '',
@@ -1298,7 +1309,6 @@ function buildInventoryWorkbook(ExcelJS, status, items){
       if(col.date && v instanceof Date) cell.numFmt = 'mm-dd-yy';
     });
   });
-  return wb;
 }
 
 async function exportExcel(){
@@ -1306,14 +1316,12 @@ async function exportExcel(){
   btn.disabled = true;
   try{
     const ExcelJS = await loadExcelJs();
-    const items = sortItems(state.items.filter(r => r.status === currentTab),
-                            document.getElementById('sortSelect').value);
-    const wb = buildInventoryWorkbook(ExcelJS, currentTab, items);
+    const wb = buildInventoryWorkbook(ExcelJS, document.getElementById('sortSelect').value);
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const dl = await window.claude.use('downloads');
     if(!dl){ showStorageNotice('この画面ではExcelファイルを保存できません。'); return; }
-    await dl.save({filename: `試薬台帳_${STATUS_LABEL[currentTab]}一覧_${todayStr()}.xlsx`, data: blob});
+    await dl.save({filename: `試薬台帳_${todayStr()}.xlsx`, data: blob});
   }catch(e){
     if(e && e.code === 'declined') return;
     console.error('Excel出力に失敗しました', e);
