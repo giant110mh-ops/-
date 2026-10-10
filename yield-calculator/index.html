@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>収率計算ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* Layout: 実験ノートの1ページ。上に反応名、仕込み表（横スクロール可）、下段に生成物入力と収率結果を2カラム（狭幅で1カラム） */
+:root {
+  --bg: #eef2f4;
+  --surface: #ffffff;
+  --sunken: #f5f8f9;
+  --ink: #15202a;
+  --muted: #5a6874;
+  --line: #d3dce2;
+  --accent: #0e7383;
+  --accent-soft: #dcefF1;
+  --good: #2c7a49;
+  --warn: #a8570f;
+  --bad: #b3261e;
+  --font-body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e151a; --surface: #162028; --sunken: #111a20; --ink: #e2e9ee; --muted: #93a3af;
+    --line: #2a3a45; --accent: #4fc0cf; --accent-soft: #173a41; --good: #6cc48d; --warn: #e3a25a; --bad: #f08a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e151a; --surface: #162028; --sunken: #111a20; --ink: #e2e9ee; --muted: #93a3af;
+  --line: #2a3a45; --accent: #4fc0cf; --accent-soft: #173a41; --good: #6cc48d; --warn: #e3a25a; --bad: #f08a80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 14px; line-height: 1.6;
+  padding-inline: 16px; padding-block: 24px 48px;
+}
+[hidden] { display: none !important; }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+.eyebrow { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin: 0; }
+h1 { margin: 2px 0 0; font-size: 26px; line-height: 1.25; text-wrap: balance; font-weight: 700; }
+.title-input {
+  font: inherit; font-size: 16px; color: var(--ink); background: transparent; border: 0;
+  border-bottom: 1px dashed var(--line); padding: 2px 0; width: min(100%, 420px);
+}
+.title-input:focus { outline: none; border-bottom-color: var(--accent); }
+.head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+section.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+h2 { margin: 0; font-size: 15px; font-weight: 700; }
+.hint { color: var(--muted); font-size: 12px; margin: 0; }
+
+button {
+  font: inherit; font-size: 13px; cursor: pointer; border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 6px 12px;
+}
+button:hover { border-color: var(--accent); color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600; }
+button.primary:hover { filter: brightness(1.08); color: var(--surface); }
+button.icon { padding: 4px 8px; color: var(--muted); border-color: transparent; background: transparent; }
+button.icon:hover { color: var(--bad); border-color: var(--line); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.table-scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 1200px; }
+th, td { padding: 6px 6px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--line); }
+th { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .04em; white-space: nowrap; background: var(--sunken); }
+tbody tr:last-child td { border-bottom: 0; }
+tr.limiting td { background: var(--accent-soft); }
+td.out { font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+th.num { text-align: right; }
+
+input, select {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--sunken);
+  border: 1px solid var(--line); border-radius: 4px; padding: 5px 7px; width: 100%; min-width: 0;
+}
+input:focus, select:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+input.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+input.formula { font-family: var(--font-num); }
+input.invalid { border-color: var(--bad); }
+.with-unit { display: flex; align-items: center; gap: 4px; }
+.with-unit span { font-size: 11px; color: var(--muted); white-space: nowrap; min-width: 2.6em; }
+input[type="radio"] { width: auto; accent-color: var(--accent); }
+
+.chip { display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.chip.lim { color: var(--accent); }
+.sub { display: block; font-size: 11px; color: var(--muted); }
+.table-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 16px 14px; }
+.msg { font-size: 12px; color: var(--warn); margin: 0; }
+
+.lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
+@media (max-width: 820px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; padding: 16px; }
+.form-grid .full { grid-column: 1 / -1; }
+label.field { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+@media (max-width: 420px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.result-body { padding: 18px 16px 16px; display: grid; gap: 18px; }
+.yield-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.yield-num { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 52px; line-height: 1; font-weight: 600; letter-spacing: -.02em; }
+.yield-num small { font-size: 24px; font-weight: 500; margin-left: 2px; }
+.status { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; }
+.status.ok { color: var(--good); }
+.status.warn { color: var(--warn); }
+.status.bad { color: var(--bad); }
+
+.gauge { position: relative; height: 10px; background: var(--sunken); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.gauge-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); border-radius: 999px; transition: width .35s ease; }
+.gauge-fill.over { background: var(--warn); }
+.gauge-scale { display: flex; justify-content: space-between; font-family: var(--font-num); font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) { .gauge-fill { transition: none; } }
+
+dl.facts { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; border-top: 1px solid var(--line); }
+dl.facts dt, dl.facts dd { margin: 0; padding: 7px 0; border-bottom: 1px solid var(--line); }
+dl.facts dt { color: var(--muted); font-size: 12.5px; }
+dl.facts dd { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+
+.copy-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.copy-status { font-size: 12px; color: var(--good); }
+textarea#summary {
+  width: 100%; min-height: 210px; font-family: var(--font-num); font-size: 12px; line-height: 1.55;
+  color: var(--ink); background: var(--sunken); border: 1px solid var(--line); border-radius: 4px; padding: 10px; resize: vertical;
+}
+
+details.help { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; }
+details.help summary { cursor: pointer; font-weight: 600; }
+details.help ul { margin: 8px 0 0; padding-left: 1.2em; color: var(--muted); max-width: 72ch; display: grid; gap: 4px; }
+code { font-family: var(--font-num); font-size: 12px; background: var(--sunken); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="eyebrow">Organic Synthesis · Yield</p>
+      <h1>収率計算ノート</h1>
+      <input class="title-input" id="rxn-title" type="text" placeholder="反応名・実験番号（例: MH-042 鈴木–宮浦カップリング）" aria-label="反応名">
+    </div>
+    <div class="head-actions">
+      <button type="button" id="btn-sample">例を読み込む</button>
+      <button type="button" id="btn-clear">すべてクリア</button>
+    </div>
+  </header>
+
+  <section class="panel" aria-labelledby="h-reagents">
+    <div class="panel-head">
+      <h2 id="h-reagents">仕込み（原料・試薬）</h2>
+      <p class="hint">「基準」に選んだ物質を 1.00 equiv とします。律速試薬は自動で判定されます。</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>基準</th>
+            <th style="width:180px">名称</th>
+            <th style="width:100px">役割</th>
+            <th style="width:140px">分子式</th>
+            <th style="width:108px">MW (g/mol)</th>
+            <th style="width:104px">入力方法</th>
+            <th style="width:136px">量</th>
+            <th style="width:120px">密度 / 濃度</th>
+            <th style="width:76px">純度 %</th>
+            <th style="width:60px">係数</th>
+            <th class="num">mmol</th>
+            <th class="num">equiv</th>
+            <th class="num">質量 / 体積</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="reagents"></tbody>
+      </table>
+    </div>
+    <div class="table-foot">
+      <button type="button" class="primary" id="btn-add">＋ 試薬を追加</button>
+      <p class="msg" id="reagent-msg" hidden></p>
+    </div>
+  </section>
+
+  <div class="lower">
+    <section class="panel" aria-labelledby="h-product">
+      <div class="panel-head">
+        <h2 id="h-product">生成物</h2>
+        <p class="hint">単離した目的物の質量を入力します。</p>
+      </div>
+      <div class="form-grid">
+        <label class="field full">名称
+          <input id="p-name" type="text" placeholder="例: 4-メトキシビフェニル">
+        </label>
+        <label class="field">分子式
+          <input id="p-formula" class="formula" type="text" placeholder="C13H12O">
+        </label>
+        <label class="field">MW (g/mol)
+          <input id="p-mw" class="num" type="number" step="any" min="0" placeholder="自動">
+        </label>
+        <label class="field">得られた質量
+          <span class="with-unit"><input id="p-mass" class="num" type="number" step="any" min="0" placeholder="0"><span>mg</span></span>
+        </label>
+        <label class="field">純度
+          <span class="with-unit"><input id="p-purity" class="num" type="number" step="any" min="0" max="100" placeholder="100"><span>%</span></span>
+        </label>
+        <label class="field">化学量論係数
+          <input id="p-coef" class="num" type="number" step="any" min="0" placeholder="1">
+        </label>
+        <label class="field">備考
+          <input id="p-note" type="text" placeholder="例: 白色固体, Rf 0.45 (Hex/EtOAc 10:1)">
+        </label>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-result">
+      <div class="panel-head">
+        <h2 id="h-result">収率</h2>
+        <p class="hint" id="example-note" hidden>表示中は入力例です</p>
+      </div>
+      <div class="result-body">
+        <div>
+          <div class="yield-line">
+            <span class="yield-num" id="r-yield">—<small>%</small></span>
+            <span class="status" id="r-status" hidden></span>
+          </div>
+          <div style="margin-top:12px">
+            <div class="gauge" aria-hidden="true"><div class="gauge-fill" id="r-gauge"></div></div>
+            <div class="gauge-scale" aria-hidden="true"><span>0</span><span>25</span><span>50</span><span>75</span><span>100%</span></div>
+          </div>
+        </div>
+        <dl class="facts">
+          <dt>律速試薬</dt><dd id="r-limiting">—</dd>
+          <dt>理論収量</dt><dd id="r-theo">—</dd>
+          <dt>実収量（純度補正後）</dt><dd id="r-actual">—</dd>
+          <dt>生成物 MW</dt><dd id="r-pmw">—</dd>
+        </dl>
+        <div style="display:grid; gap:8px">
+          <div class="copy-row">
+            <button type="button" id="btn-copy">ノート用テキストをコピー</button>
+            <span class="copy-status" id="copy-status" aria-live="polite"></span>
+          </div>
+          <textarea id="summary" readonly aria-label="実験ノート用のまとめ"></textarea>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <details class="help">
+    <summary>計算方法と分子式の書き方</summary>
+    <ul>
+      <li>質量入力: mmol = 質量(mg) × 純度 ÷ MW</li>
+      <li>体積入力（液体）: 質量(mg) = 体積(µL) × 密度(g/mL)、そのあと質量入力と同じ</li>
+      <li>溶液入力: mmol = 体積(mL) × 濃度(M)。n-BuLi などの溶液試薬に使います</li>
+      <li>当量指定: 基準物質の mmol × equiv から必要量を逆算します。密度を入れると µL も表示します</li>
+      <li>律速試薬は役割が「基質」「反応剤」の行のうち、mmol ÷ 係数 が最小のものです。触媒・添加剤・溶媒は除外します</li>
+      <li>理論収量(mmol) = 律速試薬の mmol ÷ 係数 × 生成物の係数。収率 = 実収量 ÷ 理論収量 × 100</li>
+      <li>分子式は <code>C7H7BrO</code>、括弧 <code>Pd(PPh3)4</code>、水和物 <code>CuSO4·5H2O</code>（<code>.</code> や <code>*</code> も可）に対応します</li>
+      <li>略号 <code>Me Et Bu tBu iPr Ph Bn Bz Ac Ts Ms Tf Boc Cbz Piv Cy TMS TBS</code> も使えます（例 <code>PhB(OH)2</code>、<code>Et3N</code>）</li>
+      <li>MW 欄に値を入れると分子式からの計算値より優先されます</li>
+      <li>入力内容はこのブラウザにだけ自動保存されます</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- 原子量（IUPAC 標準原子量の慣用値） ----
+  const AW = {
+    H:1.008, D:2.014, He:4.0026, Li:6.94, Be:9.0122, B:10.81, C:12.011, N:14.007, O:15.999, F:18.998,
+    Ne:20.180, Na:22.990, Mg:24.305, Al:26.982, Si:28.085, P:30.974, S:32.06, Cl:35.45, Ar:39.95,
+    K:39.098, Ca:40.078, Sc:44.956, Ti:47.867, V:50.942, Cr:51.996, Mn:54.938, Fe:55.845, Co:58.933,
+    Ni:58.693, Cu:63.546, Zn:65.38, Ga:69.723, Ge:72.630, As:74.922, Se:78.971, Br:79.904, Kr:83.798,
+    Rb:85.468, Sr:87.62, Y:88.906, Zr:91.224, Nb:92.906, Mo:95.95, Ru:101.07, Rh:102.91, Pd:106.42,
+    Ag:107.87, Cd:112.41, In:114.82, Sn:118.71, Sb:121.76, Te:127.60, I:126.90, Xe:131.29, Cs:132.91,
+    Ba:137.33, La:138.91, Ce:140.12, Pr:140.91, Nd:144.24, Sm:150.36, Eu:151.96, Gd:157.25, Tb:158.93,
+    Dy:162.50, Ho:164.93, Er:167.26, Tm:168.93, Yb:173.05, Lu:174.97, Hf:178.49, Ta:180.95, W:183.84,
+    Re:186.21, Os:190.23, Ir:192.22, Pt:195.08, Au:196.97, Hg:200.59, Tl:204.38, Pb:207.2, Bi:208.98,
+    Th:232.04, U:238.03
+  };
+  // 有機化学の略号（Ac はアクチニウムではなくアセチルとして扱う）
+  const ABBR = {
+    Me:"CH3", Et:"C2H5", Bu:"C4H9", nBu:"C4H9", tBu:"C4H9", iPr:"C3H7", nPr:"C3H7", Ph:"C6H5", Bn:"C7H7",
+    Bz:"C7H5O", Ac:"C2H3O", Ts:"C7H7SO2", Ms:"CH3SO2", Tf:"CF3SO2", Boc:"C5H9O2", Cbz:"C8H7O2",
+    Piv:"C5H9O", Cy:"C6H11", TMS:"C3H9Si", TBS:"C6H15Si"
+  };
+  const ABBR_KEYS = Object.keys(ABBR).sort((a, b) => b.length - a.length);
+
+  function addCounts(target, src, mult) {
+    for (const k in src) target[k] = (target[k] || 0) + src[k] * mult;
+  }
+
+  function parseGroup(s, pos, closer) {
+    const counts = {};
+    while (pos.i < s.length) {
+      const ch = s[pos.i];
+      if (ch === ")" || ch === "]") {
+        if (ch !== closer) throw new Error("括弧の対応が不正です");
+        pos.i++;
+        return counts;
+      }
+      let part;
+      if (ch === "(" || ch === "[") {
+        pos.i++;
+        part = parseGroup(s, pos, ch === "(" ? ")" : "]");
+      } else {
+        const abbr = ABBR_KEYS.find(k => s.startsWith(k, pos.i));
+        if (abbr) {
+          pos.i += abbr.length;
+          part = parseFormulaCounts(ABBR[abbr]);
+        } else {
+          const m = /^[A-Z][a-z]?/.exec(s.slice(pos.i));
+          if (!m) throw new Error("読めない文字: " + ch);
+          let sym = m[0];
+          if (!(sym in AW)) {
+            if (sym.length === 2 && (sym[0] in AW)) sym = sym[0];
+            else throw new Error("不明な元素: " + sym);
+          }
+          pos.i += sym.length;
+          part = { [sym]: 1 };
+        }
+      }
+      const n = /^\d+(\.\d+)?/.exec(s.slice(pos.i));
+      let mult = 1;
+      if (n) { mult = parseFloat(n[0]); pos.i += n[0].length; }
+      addCounts(counts, part, mult);
+    }
+    if (closer) throw new Error("括弧が閉じていません");
+    return counts;
+  }
+
+  function parseFormulaCounts(formula) {
+    const s = String(formula).replace(/\s+/g, "");
+    if (!s) throw new Error("空です");
+    const total = {};
+    for (const seg of s.split(/[·•・.*]/)) {
+      if (!seg) continue;
+      const lead = /^\d+(\.\d+)?/.exec(seg);
+      const mult = lead ? parseFloat(lead[0]) : 1;
+      const body = lead ? seg.slice(lead[0].length) : seg;
+      addCounts(total, parseGroup(body, { i: 0 }, null), mult);
+    }
+    return total;
+  }
+
+  function formulaMW(formula) {
+    const counts = parseFormulaCounts(formula);
+    let mw = 0;
+    for (const el in counts) mw += AW[el] * counts[el];
+    if (!(mw > 0)) throw new Error("空です");
+    return mw;
+  }
+
+  // ---- 状態 ----
+  const ROLES = [
+    ["substrate", "基質"], ["reagent", "反応剤"], ["catalyst", "触媒"], ["additive", "塩基・添加剤"], ["solvent", "溶媒"]
+  ];
+  const ROLE_LABEL = Object.fromEntries(ROLES);
+  const REACTIVE = new Set(["substrate", "reagent"]);
+  const MODES = {
+    mass:     { label: "質量",   unit: "mg",    aux: null },
+    volume:   { label: "体積",   unit: "µL",    aux: "g/mL" },
+    solution: { label: "溶液",   unit: "mL",    aux: "M" },
+    equiv:    { label: "当量指定", unit: "equiv", aux: "g/mL" }
+  };
+  const STORE_KEY = "yield-calc-v1";
+  let nextId = 1;
+
+  function newRow(over) {
+    return Object.assign({ id: nextId++, name: "", role: "reagent", formula: "", mw: "", mode: "mass", amount: "", aux: "", purity: "", coef: "" }, over || {});
+  }
+
+  function sampleState() {
+    nextId = 1;
+    const rows = [
+      newRow({ name: "4-ブロモアニソール", role: "substrate", formula: "C7H7BrO", mode: "mass", amount: "187.0" }),
+      newRow({ name: "フェニルボロン酸", role: "reagent", formula: "PhB(OH)2", mode: "equiv", amount: "1.2" }),
+      newRow({ name: "Pd(PPh3)4", role: "catalyst", formula: "Pd(PPh3)4", mode: "equiv", amount: "0.05" }),
+      newRow({ name: "炭酸カリウム", role: "additive", formula: "K2CO3", mode: "equiv", amount: "2.0" }),
+      newRow({ name: "トルエン", role: "solvent", formula: "", mode: "volume", amount: "5000", aux: "0.867" })
+    ];
+    return {
+      example: true,
+      title: "例: 鈴木–宮浦カップリング",
+      refId: rows[0].id,
+      rows,
+      product: { name: "4-メトキシビフェニル", formula: "C13H12O", mw: "", mass: "156.0", purity: "98", coef: "", note: "白色固体" }
+    };
+  }
+
+  function emptyState() {
+    nextId = 1;
+    const rows = [newRow({ role: "substrate" }), newRow({ role: "reagent" })];
+    return { example: false, title: "", refId: rows[0].id, rows, product: { name: "", formula: "", mw: "", mass: "", purity: "", coef: "", note: "" } };
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && Array.isArray(s.rows) && s.product) {
+          nextId = s.rows.reduce((m, r) => Math.max(m, r.id), 0) + 1;
+          return s;
+        }
+      }
+    } catch (e) { /* 保存領域が使えなくても動作させる */ }
+    return sampleState();
+  }
+
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  }
+
+  let state = load();
+
+  // ---- 計算 ----
+  const num = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : NaN; };
+  const pos = (v, dflt) => { const x = num(v); return x > 0 ? x : dflt; };
+
+  function resolveMW(formula, mwOverride) {
+    const o = num(mwOverride);
+    if (o > 0) return { mw: o, err: null, fromFormula: false };
+    if (!String(formula || "").trim()) return { mw: NaN, err: null, fromFormula: false };
+    try { return { mw: formulaMW(formula), err: null, fromFormula: true }; }
+    catch (e) { return { mw: NaN, err: e.message, fromFormula: false }; }
+  }
+
+  function compute() {
+    const res = { rows: {}, refMmol: NaN, limitingId: null, minRatio: NaN, messages: [] };
+
+    function basic(r) {
+      const m = resolveMW(r.formula, r.mw);
+      const purity = pos(r.purity, 100) / 100;
+      const amt = num(r.amount);
+      const aux = num(r.aux);
+      let mmol = NaN, mg = NaN, ul = NaN;
+      if (r.mode === "mass") { mg = amt; mmol = mg * purity / m.mw; }
+      else if (r.mode === "volume") { ul = amt; mg = amt * aux; mmol = mg * purity / m.mw; }
+      else if (r.mode === "solution") { mmol = amt * aux; mg = mmol * m.mw; }
+      return { mwInfo: m, mmol, mg, ul };
+    }
+
+    for (const r of state.rows) if (r.mode !== "equiv") res.rows[r.id] = basic(r);
+
+    const ref = state.rows.find(r => r.id === state.refId);
+    if (!ref) res.messages.push("基準物質を選んでください。");
+    else if (ref.mode === "equiv") res.messages.push("基準物質は「当量指定」以外の入力方法にしてください。");
+    else res.refMmol = res.rows[ref.id].mmol;
+
+    for (const r of state.rows) {
+      if (r.mode !== "equiv") continue;
+      const m = resolveMW(r.formula, r.mw);
+      const purity = pos(r.purity, 100) / 100;
+      const mmol = num(r.amount) * res.refMmol;
+      const mg = mmol * m.mw / purity;
+      const d = num(r.aux);
+      res.rows[r.id] = { mwInfo: m, mmol, mg, ul: d > 0 ? mg / d : NaN };
+    }
+
+    for (const r of state.rows) {
+      const c = res.rows[r.id];
+      c.equiv = c.mmol / res.refMmol;
+      if (REACTIVE.has(r.role) && c.mmol > 0) {
+        const ratio = c.mmol / pos(r.coef, 1);
+        if (!(ratio >= res.minRatio)) { res.minRatio = ratio; res.limitingId = r.id; }
+      }
+    }
+
+    const p = state.product;
+    res.pmw = resolveMW(p.formula, p.mw);
+    res.theoMmol = res.minRatio * pos(p.coef, 1);
+    res.theoMg = res.theoMmol * res.pmw.mw;
+    res.actualMmol = num(p.mass) * pos(p.purity, 100) / 100 / res.pmw.mw;
+    res.actualMg = num(p.mass) * pos(p.purity, 100) / 100;
+    res.yield = res.actualMmol / res.theoMmol * 100;
+    return res;
+  }
+
+  // ---- 表示 ----
+  const $ = id => document.getElementById(id);
+  const ok = x => Number.isFinite(x);
+  const f = (x, d) => ok(x) ? x.toFixed(d) : "—";
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function fmtAmount(c) {
+    const parts = [];
+    if (ok(c.mg)) parts.push(c.mg >= 1000 ? (c.mg / 1000).toFixed(3) + " g" : c.mg.toFixed(1) + " mg");
+    if (ok(c.ul)) parts.push(c.ul >= 1000 ? (c.ul / 1000).toFixed(2) + " mL" : c.ul.toFixed(0) + " µL");
+    return parts;
+  }
+
+  function rowHTML(r) {
+    const mode = MODES[r.mode];
+    const p = "r" + r.id + "-";
+    return `<tr data-id="${r.id}">
+      <td style="text-align:center"><input type="radio" name="ref" id="${p}ref" data-k="ref" ${state.refId === r.id ? "checked" : ""} aria-label="基準物質にする"></td>
+      <td><input type="text" id="${p}name" data-k="name" value="${esc(r.name)}" placeholder="名称"></td>
+      <td><select id="${p}role" data-k="role">${ROLES.map(([v, l]) => `<option value="${v}" ${r.role === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
+      <td><input type="text" class="formula" id="${p}formula" data-k="formula" value="${esc(r.formula)}" placeholder="${r.role === "solvent" ? "任意" : "例 C6H6"}"></td>
+      <td><input type="number" step="any" min="0" class="num" id="${p}mw" data-k="mw" value="${esc(r.mw)}" placeholder="自動"></td>
+      <td><select id="${p}mode" data-k="mode">${Object.entries(MODES).map(([v, m]) => `<option value="${v}" ${r.mode === v ? "selected" : ""}>${m.label}</option>`).join("")}</select></td>
+      <td><span class="with-unit"><input type="number" step="any" min="0" class="num" id="${p}amount" data-k="amount" value="${esc(r.amount)}" placeholder="0"><span>${mode.unit}</span></span></td>
+      <td>${mode.aux ? `<span class="with-unit"><input type="number" step="any" min="0" class="num" id="${p}aux" data-k="aux" value="${esc(r.aux)}" placeholder="${r.mode === "equiv" ? "任意" : "0"}"><span>${mode.aux}</span></span>` : `<span class="sub">—</span>`}</td>
+      <td>${r.mode === "solution" ? `<span class="sub">—</span>` : `<input type="number" step="any" min="0" max="100" class="num" id="${p}purity" data-k="purity" value="${esc(r.purity)}" placeholder="100">`}</td>
+      <td><input type="number" step="any" min="0" class="num" id="${p}coef" data-k="coef" value="${esc(r.coef)}" placeholder="1"></td>
+      <td class="out" data-o="mmol"></td>
+      <td class="out" data-o="equiv"></td>
+      <td class="out" data-o="amount"></td>
+      <td><button type="button" class="icon" data-act="del" aria-label="この行を削除">✕</button></td>
+    </tr>`;
+  }
+
+  function renderRows() {
+    $("reagents").innerHTML = state.rows.map(rowHTML).join("");
+  }
+
+  function renderStatic() {
+    $("rxn-title").value = state.title || "";
+    const p = state.product;
+    $("p-name").value = p.name; $("p-formula").value = p.formula; $("p-mw").value = p.mw;
+    $("p-mass").value = p.mass; $("p-purity").value = p.purity; $("p-coef").value = p.coef; $("p-note").value = p.note || "";
+    renderRows();
+  }
+
+  function update() {
+    const res = compute();
+
+    for (const r of state.rows) {
+      const tr = document.querySelector(`tr[data-id="${r.id}"]`);
+      if (!tr) continue;
+      const c = res.rows[r.id];
+      const mwInput = tr.querySelector('[data-k="mw"]');
+      mwInput.placeholder = c.mwInfo.fromFormula ? c.mwInfo.mw.toFixed(2) : "自動";
+      tr.querySelector('[data-k="formula"]').classList.toggle("invalid", !!c.mwInfo.err);
+      tr.querySelector('[data-k="formula"]').title = c.mwInfo.err || "";
+      tr.classList.toggle("limiting", res.limitingId === r.id);
+      tr.querySelector('[data-o="mmol"]').innerHTML = f(c.mmol, 3) + (res.limitingId === r.id ? ` <span class="chip lim">律速</span>` : "");
+      tr.querySelector('[data-o="equiv"]').textContent = r.role === "solvent" ? "—" : f(c.equiv, 2);
+      const amt = fmtAmount(c);
+      tr.querySelector('[data-o="amount"]').innerHTML = amt.length
+        ? (r.mode === "equiv" ? `<span class="sub">必要量</span>` : "") + amt.map(esc).join("<br>")
+        : "—";
+    }
+
+    const msg = res.messages.slice();
+    const bad = state.rows.filter(r => res.rows[r.id].mwInfo.err);
+    if (bad.length) msg.push("分子式を読めない行があります: " + bad.map(r => r.name || r.formula).join("、"));
+    $("reagent-msg").hidden = !msg.length;
+    $("reagent-msg").textContent = msg.join(" ");
+
+    $("p-mw").placeholder = res.pmw.fromFormula ? res.pmw.mw.toFixed(2) : "自動";
+    $("p-formula").classList.toggle("invalid", !!res.pmw.err);
+    $("p-formula").title = res.pmw.err || "";
+
+    const y = res.yield;
+    $("r-yield").innerHTML = (ok(y) ? y.toFixed(1) : "—") + "<small>%</small>";
+    const st = $("r-status");
+    if (ok(y)) {
+      st.hidden = false;
+      if (y > 100.5) { st.className = "status bad"; st.textContent = "100% 超: 溶媒残留や不純物を確認"; }
+      else if (y >= 80) { st.className = "status ok"; st.textContent = "高収率"; }
+      else if (y >= 50) { st.className = "status ok"; st.textContent = "中程度"; }
+      else { st.className = "status warn"; st.textContent = "低収率"; }
+    } else st.hidden = true;
+    const g = $("r-gauge");
+    g.style.width = ok(y) ? Math.min(Math.max(y, 0), 100) + "%" : "0";
+    g.classList.toggle("over", ok(y) && y > 100.5);
+
+    const lim = state.rows.find(r => r.id === res.limitingId);
+    $("r-limiting").textContent = lim ? (lim.name || lim.formula || "(無名)") : "—";
+    $("r-theo").textContent = ok(res.theoMmol) ? `${f(res.theoMmol, 3)} mmol / ${f(res.theoMg, 1)} mg` : "—";
+    $("r-actual").textContent = ok(res.actualMmol) ? `${f(res.actualMmol, 3)} mmol / ${f(res.actualMg, 1)} mg` : "—";
+    $("r-pmw").textContent = ok(res.pmw.mw) ? res.pmw.mw.toFixed(2) + " g/mol" : "—";
+
+    $("example-note").hidden = !state.example;
+    $("summary").value = summaryText(res);
+    save();
+  }
+
+  function summaryText(res) {
+    const lines = [];
+    if (state.title) lines.push(state.title);
+    for (const r of state.rows) {
+      const c = res.rows[r.id];
+      const id = [r.formula, ok(c.mwInfo.mw) ? "MW " + c.mwInfo.mw.toFixed(2) : ""].filter(Boolean).join(", ");
+      const parts = fmtAmount(c);
+      if (r.mode === "solution" && ok(num(r.amount))) parts.unshift(`${r.amount} mL (${r.aux} M)`);
+      if (ok(c.mmol)) parts.push(f(c.mmol, 3) + " mmol");
+      if (r.role !== "solvent" && ok(c.equiv)) parts.push(f(c.equiv, 2) + " equiv");
+      lines.push(`[${ROLE_LABEL[r.role]}] ${r.name || "(無名)"}${id ? " (" + id + ")" : ""}: ${parts.join(", ") || "—"}`);
+    }
+    const p = state.product;
+    const pid = [p.formula, ok(res.pmw.mw) ? "MW " + res.pmw.mw.toFixed(2) : ""].filter(Boolean).join(", ");
+    const purity = pos(p.purity, 100);
+    lines.push(`[生成物] ${p.name || "(無名)"}${pid ? " (" + pid + ")" : ""}: ${ok(num(p.mass)) ? num(p.mass).toFixed(1) + " mg" : "—"}${purity < 100 ? ` (純度 ${purity}%)` : ""}${p.note ? ", " + p.note : ""}`);
+    lines.push(`理論収量 ${ok(res.theoMg) ? f(res.theoMg, 1) + " mg (" + f(res.theoMmol, 3) + " mmol)" : "—"} → 収率 ${ok(res.yield) ? res.yield.toFixed(1) + "%" : "—"}`);
+    return lines.join("\n");
+  }
+
+  // ---- イベント ----
+  function touched() { state.example = false; }
+
+  $("reagents").addEventListener("input", e => {
+    const k = e.target.dataset.k; if (!k || k === "ref") return;
+    const r = state.rows.find(x => x.id === +e.target.closest("tr").dataset.id);
+    r[k] = e.target.value; touched();
+    if (k === "mode") { renderRows(); }
+    update();
+  });
+  $("reagents").addEventListener("change", e => {
+    if (e.target.dataset.k === "ref") {
+      state.refId = +e.target.closest("tr").dataset.id; touched(); update();
+    }
+  });
+  $("reagents").addEventListener("click", e => {
+    const b = e.target.closest('[data-act="del"]'); if (!b) return;
+    const id = +b.closest("tr").dataset.id;
+    state.rows = state.rows.filter(r => r.id !== id);
+    if (state.refId === id && state.rows.length) state.refId = state.rows[0].id;
+    touched(); renderRows(); update();
+  });
+  $("btn-add").addEventListener("click", () => {
+    const r = newRow(); state.rows.push(r);
+    if (!state.rows.some(x => x.id === state.refId)) state.refId = r.id;
+    touched(); renderRows(); update();
+    $("r" + r.id + "-name").focus();
+  });
+  $("rxn-title").addEventListener("input", e => { state.title = e.target.value; touched(); update(); });
+  const pmap = { "p-name": "name", "p-formula": "formula", "p-mw": "mw", "p-mass": "mass", "p-purity": "purity", "p-coef": "coef", "p-note": "note" };
+  for (const id in pmap) $(id).addEventListener("input", e => { state.product[pmap[id]] = e.target.value; touched(); update(); });
+
+  // confirm() が使えない環境もあるため、2回押しで確定する
+  let clearArmed = null;
+  $("btn-clear").addEventListener("click", e => {
+    if (!clearArmed) {
+      e.target.textContent = "もう一度押すとクリア";
+      clearArmed = setTimeout(() => { clearArmed = null; e.target.textContent = "すべてクリア"; }, 3000);
+      return;
+    }
+    clearTimeout(clearArmed); clearArmed = null; e.target.textContent = "すべてクリア";
+    state = emptyState(); renderStatic(); update();
+  });
+  $("btn-sample").addEventListener("click", () => { state = sampleState(); renderStatic(); update(); });
+
+  $("btn-copy").addEventListener("click", () => {
+    const text = $("summary").value;
+    const done = msg => { $("copy-status").textContent = msg; setTimeout(() => { $("copy-status").textContent = ""; }, 2500); };
+    const fallback = () => { $("summary").select(); done("選択しました。Ctrl+C / ⌘C でコピーしてください"); };
+    try {
+      navigator.clipboard.writeText(text).then(() => done("コピーしました"), fallback);
+    } catch (err) { fallback(); }
+  });
+
+  renderStatic();
+  update();
+})();
+</script>
+</body>
+</html>
