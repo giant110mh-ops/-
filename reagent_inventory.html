@@ -1,0 +1,1738 @@
+<title>試薬台帳</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --paper:#EEF1EC;
+  --paper-line:rgba(22,35,46,0.05);
+  --ink:#16232E;
+  --ink-soft:#5B6B70;
+  --ink-faint:#8B9A9E;
+  --amber:#B9812C;
+  --amber-deep:#8C5F1E;
+  --amber-soft:#F1E1BE;
+  --danger:#A8433D;
+  --danger-soft:#F1DAD6;
+  --success:#3F7859;
+  --success-soft:#DCE8DF;
+  --card:#FBFAF5;
+  --border:#D9DCD2;
+  --shadow:0 2px 14px rgba(22,35,46,0.09);
+  --radius:8px;
+  --font-display:'Shippori Mincho', serif;
+  --font-body:'Noto Sans JP', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+  --on-accent:#FFFFFF;
+  --row-hover:#F3F1E9;
+  --hazard-row:#F1EAF8;
+  --hazard-row-hover:#E9DEF4;
+  --scrim:rgba(22,35,46,0.45);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#11181D; --paper-line:rgba(228,232,227,0.035);
+    --ink:#E3E7E1; --ink-soft:#9DABAE; --ink-faint:#6E7D81;
+    --amber:#D49F4E; --amber-deep:#9C6B26; --amber-soft:#3A2E1A;
+    --danger:#B9524A; --danger-soft:#3A2321; --success:#6DB089; --success-soft:#1E3328;
+    --card:#19222A; --border:#2C3942; --shadow:0 2px 14px rgba(0,0,0,0.35);
+    --row-hover:#212D36; --hazard-row:#251E30; --hazard-row-hover:#2E2540;
+    --scrim:rgba(0,0,0,0.6);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#11181D; --paper-line:rgba(228,232,227,0.035);
+  --ink:#E3E7E1; --ink-soft:#9DABAE; --ink-faint:#6E7D81;
+  --amber:#D49F4E; --amber-deep:#9C6B26; --amber-soft:#3A2E1A;
+  --danger:#B9524A; --danger-soft:#3A2321; --success:#6DB089; --success-soft:#1E3328;
+  --card:#19222A; --border:#2C3942; --shadow:0 2px 14px rgba(0,0,0,0.35);
+  --row-hover:#212D36; --hazard-row:#251E30; --hazard-row-hover:#2E2540;
+  --scrim:rgba(0,0,0,0.6);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(var(--paper-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--paper-line) 1px, transparent 1px);
+  background-size:28px 28px;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+
+/* ---------- Header ---------- */
+.topbar{
+  padding:28px 32px 18px;
+  border-bottom:2px solid var(--ink);
+  background:linear-gradient(180deg, rgba(251,250,245,0.7), rgba(251,250,245,0));
+}
+.topbar-row{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:16px;
+}
+.brand-eyebrow{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:0.18em;
+  color:var(--amber-deep);
+  margin:0 0 4px;
+}
+.brand-title{
+  font-family:var(--font-display);
+  font-size:32px;
+  font-weight:700;
+  margin:0;
+  letter-spacing:0.02em;
+}
+.brand-sub{
+  font-size:12.5px;
+  color:var(--ink-soft);
+  margin:6px 0 0;
+}
+.stats-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.stat-chip{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:8px 14px;
+  min-width:92px;
+  text-align:center;
+  box-shadow:var(--shadow);
+}
+.stat-chip .num{
+  font-family:var(--font-mono);
+  font-size:19px;
+  font-weight:600;
+  display:block;
+  line-height:1.2;
+}
+.stat-chip .lbl{
+  font-size:10.5px;
+  color:var(--ink-soft);
+  letter-spacing:0.03em;
+}
+.stat-chip.warn .num{color:var(--danger);}
+
+/* ---------- Tabs ---------- */
+.tabbar{
+  display:flex;
+  gap:2px;
+  padding:0 32px;
+  margin-top:16px;
+}
+.tab-btn{
+  font-family:var(--font-display);
+  font-size:15px;
+  font-weight:600;
+  background:transparent;
+  border:none;
+  padding:10px 18px 12px;
+  color:var(--ink-soft);
+  border-bottom:3px solid transparent;
+}
+.tab-btn.active{
+  color:var(--ink);
+  border-bottom-color:var(--amber-deep);
+}
+.tab-btn:hover{color:var(--ink);}
+.tab-btn .count{
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--ink-faint);
+  margin-left:4px;
+}
+
+/* ---------- Toolbar ---------- */
+.toolbar{
+  padding:16px 32px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+}
+.toolbar-left{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.field-input, .field-select{
+  border:1px solid var(--border);
+  background:var(--card);
+  border-radius:6px;
+  padding:8px 10px;
+  font-size:13px;
+  color:var(--ink);
+}
+.field-input{min-width:240px;}
+.field-input:focus, .field-select:focus{outline:2px solid var(--amber-soft); border-color:var(--amber);}
+
+.search-wrap{position:relative; display:inline-flex; align-items:center;}
+.search-wrap svg{
+  position:absolute; left:14px;
+  width:17px; height:17px;
+  stroke:var(--ink-faint);
+  pointer-events:none;
+}
+#searchInput{
+  min-width:320px;
+  border:2px solid var(--ink);
+  background:var(--card);
+  border-radius:8px;
+  padding:11px 14px 11px 40px;
+  font-size:14.5px;
+  font-weight:500;
+  color:var(--ink);
+  box-shadow:var(--shadow);
+}
+#searchInput::placeholder{color:var(--ink-faint); font-weight:400;}
+#searchInput:focus{
+  outline:none;
+  border-color:var(--amber-deep);
+  box-shadow:0 0 0 3px var(--amber-soft), var(--shadow);
+}
+@media (max-width: 720px){
+  #searchInput{min-width:0; width:100%;}
+}
+
+.btn{
+  border:1px solid var(--ink);
+  background:var(--ink);
+  color:var(--paper);
+  padding:9px 16px;
+  border-radius:6px;
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:0.02em;
+  transition:transform .08s ease, opacity .15s ease;
+}
+.btn:hover{opacity:0.86;}
+.btn:active{transform:translateY(1px);}
+.btn.secondary{
+  background:var(--card);
+  color:var(--ink);
+  border:1px solid var(--border);
+}
+.btn.amber{background:var(--amber-deep); border-color:var(--amber-deep); color:var(--on-accent);}
+.btn.danger{background:var(--danger); border-color:var(--danger); color:var(--on-accent);}
+.btn.ghost{background:transparent;border:1px solid transparent;color:var(--ink-soft); padding:6px 10px;}
+.btn.ghost:hover{color:var(--ink); text-decoration:underline;}
+.btn:focus-visible, .field-input:focus-visible, .field-select:focus-visible, .icon-btn:focus-visible{outline:2px solid var(--amber-deep); outline-offset:2px;}
+
+/* ---------- Table ---------- */
+main{padding:0 32px 60px;}
+.table-wrap{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+table{width:100%; border-collapse:collapse; font-size:13px;}
+thead th{
+  text-align:left;
+  font-size:11px;
+  letter-spacing:0.05em;
+  color:var(--ink-soft);
+  font-weight:600;
+  padding:12px 14px;
+  border-bottom:2px solid var(--ink);
+  white-space:nowrap;
+}
+tbody td{
+  padding:12px 14px;
+  border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+tbody tr:focus-visible{outline:2px solid var(--amber-deep); outline-offset:-2px;}
+tbody tr{cursor:pointer; transition:background .1s ease;}
+tbody tr:hover{background:var(--row-hover);}
+tbody tr:last-child td{border-bottom:none;}
+.name-cell .jname{font-weight:600;}
+.name-cell .cas{font-family:var(--font-mono); font-size:11.5px; color:var(--ink-soft);}
+.qty-cell{font-family:var(--font-mono); font-weight:600;}
+.code-cell{font-family:var(--font-mono); font-size:11.5px; color:var(--ink-soft);}
+.badge{
+  display:inline-block;
+  font-size:11px;
+  padding:3px 9px;
+  border-radius:20px;
+  font-weight:600;
+  letter-spacing:0.02em;
+  white-space:nowrap;
+}
+.badge.ok{background:var(--success-soft); color:var(--success);}
+.badge.zero{background:var(--ink); color:var(--paper);}
+.badge.disposed{background:var(--danger-soft); color:var(--danger);}
+.hazard-mark{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:19px; height:19px;
+  border-radius:50%;
+  background:var(--danger);
+  color:var(--on-accent);
+  font-size:11px;
+  font-weight:700;
+  font-family:var(--font-display);
+  margin-right:6px;
+  flex-shrink:0;
+  vertical-align:middle;
+}
+tbody tr.row-hazard{background:var(--hazard-row);}
+tbody tr.row-hazard:hover{background:var(--hazard-row-hover);}
+.empty-state{
+  padding:80px 20px;
+  text-align:center;
+  color:var(--ink-soft);
+}
+.empty-state .big{font-family:var(--font-display); font-size:22px; color:var(--ink); margin-bottom:6px;}
+
+/* ---------- Overlay / Modal / Drawer ---------- */
+.overlay{
+  position:fixed; inset:0;
+  background:var(--scrim);
+  display:flex; align-items:stretch; justify-content:flex-end;
+  z-index:50;
+}
+.overlay.center{align-items:center; justify-content:center;}
+.drawer{
+  width:min(560px, 100%);
+  background:var(--paper);
+  height:100%;
+  overflow-y:auto;
+  box-shadow:-8px 0 30px rgba(0,0,0,0.2);
+  animation:slideIn .18s ease;
+}
+@keyframes slideIn{from{transform:translateX(24px); opacity:0;} to{transform:translateX(0); opacity:1;}}
+.modal{
+  width:min(540px, 92vw);
+  max-height:88vh;
+  overflow-y:auto;
+  background:var(--paper);
+  border-radius:12px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.25);
+  animation:pop .15s ease;
+}
+@keyframes pop{from{transform:scale(0.97); opacity:0;} to{transform:scale(1); opacity:1;}}
+.panel-head{
+  padding:22px 26px 16px;
+  border-bottom:2px solid var(--ink);
+  display:flex; justify-content:space-between; align-items:flex-start;
+  position:sticky; top:0; background:var(--paper); z-index:2;
+}
+.panel-head h2{font-family:var(--font-display); font-size:22px; margin:0;}
+.panel-head .sub{font-size:11.5px; color:var(--ink-soft); font-family:var(--font-mono); margin-top:4px;}
+.icon-btn{
+  background:none; border:none; font-size:20px; line-height:1; color:var(--ink-soft); padding:4px;
+}
+.icon-btn:hover{color:var(--ink);}
+.panel-body{padding:20px 26px 30px;}
+
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+.form-grid.single{grid-template-columns:1fr;}
+.form-field{display:flex; flex-direction:column; gap:5px;}
+.form-field.span2{grid-column:1 / -1;}
+.form-field label{font-size:11.5px; font-weight:600; color:var(--ink-soft); letter-spacing:0.02em;}
+.form-field input, .form-field select, .form-field textarea{
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:9px 10px;
+  font-size:13.5px;
+  background:var(--card);
+  color:var(--ink);
+}
+.form-field textarea{resize:vertical; min-height:56px;}
+.form-actions{
+  display:flex; justify-content:flex-end; gap:8px; margin-top:20px;
+  border-top:1px dashed var(--border); padding-top:16px;
+}
+.hint{font-size:11px; color:var(--ink-faint); margin-top:2px;}
+
+/* Detail drawer specifics */
+.detail-section{margin-bottom:22px;}
+.detail-section h3{
+  font-family:var(--font-display);
+  font-size:15px; margin:0 0 10px;
+  border-bottom:1px solid var(--border);
+  padding-bottom:6px;
+}
+.kv-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px 18px;}
+.kv{font-size:13px;}
+.kv .k{color:var(--ink-soft); font-size:11px; letter-spacing:0.02em;}
+.kv .v{font-weight:500;}
+.kv .v.mono{font-family:var(--font-mono);}
+.qty-hero{
+  display:flex; align-items:baseline; gap:8px;
+  background:var(--card); border:1px solid var(--border); border-radius:8px;
+  padding:14px 18px; margin-bottom:18px;
+}
+.qty-hero .n{font-family:var(--font-mono); font-size:30px; font-weight:600;}
+.qty-hero .u{font-size:14px; color:var(--ink-soft);}
+.drawer-actions{display:flex; gap:8px; margin-bottom:22px; flex-wrap:wrap;}
+
+.timeline{list-style:none; margin:0; padding:0;}
+.timeline li{
+  display:flex; gap:12px; padding:12px 0;
+  border-bottom:1px solid var(--border);
+}
+.timeline li:last-child{border-bottom:none;}
+.stamp{
+  flex-shrink:0;
+  width:52px; height:52px; border-radius:50%;
+  border:2.5px solid;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:700; font-size:12px;
+  transform:rotate(-8deg);
+  letter-spacing:0.02em;
+}
+.stamp.in{border-color:var(--success); color:var(--success);}
+.stamp.out{border-color:var(--danger); color:var(--danger);}
+.tl-body{flex:1; font-size:12.5px;}
+.tl-body .line1{font-weight:600; display:flex; justify-content:space-between; gap:8px;}
+.tl-body .line1 .amt{font-family:var(--font-mono);}
+.tl-body .meta{color:var(--ink-soft); margin-top:3px; line-height:1.6;}
+.empty-timeline{color:var(--ink-faint); font-size:12.5px; padding:14px 0;}
+
+footer.appfoot{
+  text-align:center; padding:24px; color:var(--ink-faint); font-size:11px;
+}
+
+@media (max-width: 720px){
+  .topbar, .toolbar, .tabbar, main{padding-left:16px; padding-right:16px;}
+  .form-grid{grid-template-columns:1fr;}
+  .kv-grid{grid-template-columns:1fr;}
+  table, thead, tbody, tr{display:block;}
+  thead{display:none;}
+  tbody tr{
+    border-bottom:2px solid var(--border);
+    padding:10px 4px;
+  }
+  tbody td{display:flex; justify-content:space-between; border-bottom:none; padding:6px 10px; gap:10px;}
+  tbody td::before{content:attr(data-label); font-size:10.5px; color:var(--ink-soft); font-weight:600;}
+}
+[hidden]{display:none !important;}
+.field-input{min-width:0;}
+.sync-state{display:inline-flex; align-items:center; gap:7px;}
+.sync-state::before{content:''; width:7px; height:7px; border-radius:50%; background:var(--ink-faint);}
+.sync-state[data-state="live"]::before{background:var(--success);}
+.sync-state[data-state="readonly"]::before{background:var(--amber);}
+.sync-state[data-state="offline"]::before{background:var(--danger);}
+#storageNotice{
+  position:fixed; left:0; right:0; bottom:0; z-index:200;
+  background:var(--danger); color:var(--on-accent); font-size:12.5px; text-align:center;
+  padding:9px 16px calc(9px + env(safe-area-inset-bottom, 0px));
+}
+.confirm-row{
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+  background:var(--danger-soft); color:var(--danger);
+  border-radius:8px; padding:10px 12px; margin-bottom:22px; font-size:13px; font-weight:600;
+}
+.confirm-row span{flex:1 1 200px;}
+body.readonly .write-only{display:none !important;}
+.handover-text{font-size:13px; line-height:1.7; margin:0 0 10px; color:var(--ink);}
+.handover-text code{font-family:var(--font-mono); font-size:12px;}
+.handover-status{display:block; font-size:12.5px; color:var(--ink-soft); margin-top:8px; line-height:1.6;}
+span.handover-status{display:inline; margin-left:8px;}
+.prompt-box{
+  font-size:12.5px; line-height:1.7; background:var(--card); border:1px solid var(--border);
+  border-radius:6px; padding:10px 12px; margin-bottom:8px; user-select:all; overflow-wrap:anywhere;
+}
+.import-confirm{margin-top:10px; font-size:13px; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px;}
+.check-row{display:flex; gap:8px; align-items:flex-start; margin-top:10px; font-size:12.5px; color:var(--danger);}
+#importFile{font-size:13px; max-width:100%;}
+.toolbar-right{display:flex; gap:8px; flex-wrap:wrap;}
+@media (max-width: 720px){
+  .search-wrap{width:100%;}
+  .toolbar-left, .toolbar-right{width:100%;}
+  .toolbar-left .field-select{flex:1 1 140px; min-width:0;}
+  .toolbar-right .btn{flex:1 1 auto;}
+  .tabbar{overflow-x:auto;}
+  .tab-btn{white-space:nowrap; padding:10px 12px 12px;}
+  .brand-title{font-size:26px;}
+  .panel-head, .panel-body{padding-left:18px; padding-right:18px;}
+  .modal{width:calc(100vw - 24px);}
+}
+@media (prefers-reduced-motion: reduce){
+  .drawer, .modal{animation:none;}
+}
+
+</style>
+
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div>
+      <p class="brand-eyebrow">LABORATORY REAGENT LEDGER</p>
+      <h1 class="brand-title">試薬台帳</h1>
+      <p class="brand-sub">研究室薬品の一括管理 — 詳細情報・入荷・廃棄の記録</p>
+    </div>
+    <div class="stats-row" id="statsRow"></div>
+  </div>
+</div>
+
+<div class="tabbar">
+  <button class="tab-btn active" id="tabActive" data-tab="active">登録試薬一覧 <span class="count" id="countActive"></span></button>
+  <button class="tab-btn" id="tabDisposed" data-tab="disposed">廃棄試薬一覧 <span class="count" id="countDisposed"></span></button>
+  <button class="tab-btn" id="tabPending" data-tab="pending">保留試薬一覧 <span class="count" id="countPending"></span></button>
+</div>
+
+<div class="toolbar">
+  <div class="toolbar-left">
+    <span class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="CASまたは名前（日本語名・英語名）で検索">
+    </span>
+    <select id="filterManufacturer" class="field-select"><option value="">メーカー：すべて</option></select>
+    <select id="sortSelect" class="field-select"></select>
+  </div>
+  <div class="toolbar-right">
+    <button class="btn secondary" id="duplicatesBtn">重複試薬一覧</button>
+    <button class="btn secondary" id="exportXlsxBtn">Excel出力</button>
+    <button class="btn secondary" id="handoverBtn">引継ぎ</button>
+    <button class="btn amber write-only" id="addReagentBtn">＋ 新規試薬登録</button>
+  </div>
+</div>
+
+<main>
+  <div class="table-wrap">
+    <table id="reagentTable">
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" hidden></div>
+  </div>
+</main>
+
+<footer class="appfoot"><span class="sync-state" id="syncState" data-state="connecting">共有データに接続しています…</span></footer>
+<div id="storageNotice" role="status" hidden></div>
+
+<!-- Detail Drawer -->
+<div class="overlay" id="drawerOverlay" hidden>
+  <aside class="drawer" id="drawer"></aside>
+</div>
+
+<!-- Reagent Form Modal -->
+<div class="overlay center" id="formOverlay" hidden>
+  <div class="modal" id="formModal"></div>
+</div>
+
+<!-- Stock-in / Disposal Modal -->
+<div class="overlay center" id="txOverlay" hidden>
+  <div class="modal" id="txModal"></div>
+</div>
+
+<!-- Duplicate Reagents Modal -->
+<div class="overlay center" id="handoverOverlay" hidden>
+  <div class="modal" id="handoverModal" style="width:min(640px, 94vw);"></div>
+</div>
+
+<div class="overlay center" id="dupOverlay" hidden>
+  <div class="modal" id="dupModal" style="width:min(760px, 94vw);"></div>
+</div>
+
+<script>
+let state = { items: [] };
+let currentTab = 'active';
+
+const UNITS = ['g','kg','mg','mL','L','μL','本','個'];
+const STATUS_LABEL = { active: '使用中', pending: '保留', disposed: '廃棄' };
+const DATE_LABEL = { active: '登録日', pending: '登録日', disposed: '廃棄日' };
+const PERSON_LABEL = { active: '登録者', pending: '登録者', disposed: '廃棄者' };
+
+/* ---------------- Shared storage (claude.ai db capability) ----------------
+   Each reagent is one document. Documents are spread over 24 collections
+   (inv0..inv23) by a hash of the id, so every collection stays under the
+   1000-document query window. Records written while the app used 8
+   collections stay where they are: writes go to the collection a document
+   was read from, and only new documents are placed by hash % 24. */
+const BUCKETS = 24;
+const BUCKET_LIMIT = 1000;
+const BUCKET_WARN = 900;
+const NAME_KEY = 'reagent-ledger-last-registrant';
+let db = null;
+let canWrite = false;
+let connState = 'connecting';
+const bucketMaps = Array.from({length: BUCKETS}, () => new Map());
+const loadedBuckets = new Set();
+let renderQueued = false;
+let openDetailId = null;
+
+function bucketOf(id){
+  let h = 0;
+  for(let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return h % BUCKETS;
+}
+function itemRef(id){
+  let b = bucketMaps.findIndex(m => m.has(id));
+  if(b < 0) b = bucketOf(id);
+  return db.collection('inv' + b).doc(id);
+}
+function isLoaded(){ return loadedBuckets.size === BUCKETS; }
+
+function showStorageNotice(message){
+  const el = document.getElementById('storageNotice');
+  el.textContent = message;
+  el.hidden = !message;
+}
+function setConn(s){
+  connState = s;
+  const el = document.getElementById('syncState');
+  const labels = {
+    connecting: '共有データに接続しています…',
+    live: '共有データと同期中。研究室メンバーの変更はすぐに反映されます。',
+    readonly: '閲覧のみ。このアカウントには編集権限がありません。',
+    offline: '共有データに接続できません。',
+  };
+  el.textContent = labels[s];
+  el.dataset.state = s;
+  document.body.classList.toggle('readonly', !canWrite);
+}
+
+function rebuildItems(){
+  const items = [];
+  bucketMaps.forEach(m => m.forEach(v => items.push(v)));
+  state.items = items;
+}
+function scheduleRender(){
+  if(renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    rebuildItems();
+    refreshAll();
+    if(openDetailId && !document.getElementById('drawerOverlay').hidden){
+      if(state.items.some(x => x.id === openDetailId)) openDetail(openDetailId);
+      else closeDrawer();
+    }
+  });
+}
+
+async function connectData(){
+  try{
+    db = window.claude && typeof window.claude.use === 'function' ? await window.claude.use('db') : null;
+  }catch(e){ db = null; }
+  if(!db){
+    setConn('offline');
+    showStorageNotice('共有データに接続できません。claude.ai にサインインし、共有されたリンクからこのアプリを開いてください。');
+    renderTable();
+    return;
+  }
+  canWrite = true;
+  try{
+    const user = await window.claude.use('user');
+    if(user){
+      if((await user.can('data.write')) === false) canWrite = false;
+      isAppOwner = await user.isOwner();
+    }
+  }catch(e){}
+  setConn(canWrite ? 'live' : 'readonly');
+
+  for(let b = 0; b < BUCKETS; b++){
+    db.collection('inv' + b).limit(BUCKET_LIMIT).onSnapshot(snap => {
+      const m = new Map();
+      snap.docs.forEach(d => {
+        if(d.exists) m.set(d.id, Object.assign({}, d.data(), {id: d.id}));
+      });
+      bucketMaps[b] = m;
+      loadedBuckets.add(b);
+      if(snap.size >= BUCKET_WARN){
+        showStorageNotice('登録件数が上限に近づいています。管理者に連絡してください。');
+      }
+      scheduleRender();
+    }, err => {
+      console.error('同期エラー', err);
+      setConn('offline');
+      showStorageNotice('共有データとの同期が止まりました。ページを再読み込みしてください。');
+    });
+  }
+}
+
+function itemBody(data){
+  const body = Object.assign({}, data);
+  delete body.id;
+  return body;
+}
+
+/* Runs one write against the shared store and reports failures in the page.
+   Resolves true on success. */
+async function runWrite(fn){
+  if(!db || !canWrite){
+    showStorageNotice('このアカウントでは変更を保存できません。');
+    return false;
+  }
+  for(let attempt = 0; attempt < 2; attempt++){
+    try{
+      await fn();
+      showStorageNotice('');
+      return true;
+    }catch(e){
+      const code = e && e.code;
+      if(code === 'unavailable' && attempt === 0){
+        await new Promise(r => setTimeout(r, 400 + Math.random() * 600));
+        continue;
+      }
+      console.error('保存に失敗しました', e);
+      if(code === 'invalid_argument'){
+        canWrite = false;
+        setConn('readonly');
+        refreshAll();
+        showStorageNotice('保存できませんでした。このアカウントには編集権限がありません。アプリの所有者に「Contributor」以上の権限を依頼してください。');
+      } else if(code === 'quota_exceeded'){
+        showStorageNotice('保存できませんでした。データベースの容量が上限に達しています。不要な記録を削除してから再度お試しください。');
+      } else {
+        showStorageNotice('保存できませんでした。インターネット接続を確認して、もう一度操作してください。');
+      }
+      return false;
+    }
+  }
+  return false;
+}
+function saveItem(id, data){ return runWrite(() => itemRef(id).set(itemBody(data))); }
+function patchItem(id, patch){ return runWrite(() => itemRef(id).update(patch)); }
+function removeItem(id){ return runWrite(() => itemRef(id).delete()); }
+
+function lastRegistrant(){
+  try{ return localStorage.getItem(NAME_KEY) || ''; }catch(e){ return ''; }
+}
+function rememberRegistrant(name){
+  try{ if(name) localStorage.setItem(NAME_KEY, name); }catch(e){}
+}
+
+function uid(prefix){
+  return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+}
+function todayStr(){
+  return new Date().toISOString().slice(0,10);
+}
+function fmtDate(d){
+  if(!d) return '—';
+  return d;
+}
+
+/* ---------------- Hazard location ---------------- */
+function isHazardLocation(storageLocation){
+  if(!storageLocation) return false;
+  return /[酸毒劇]/.test(storageLocation);
+}
+function hazardMark(storageLocation){
+  return isHazardLocation(storageLocation) ? '<span class="hazard-mark" title="保管場所に酸・毒・劇の表記あり">毒</span>' : '';
+}
+
+/* ---------------- Rendering: stats ---------------- */
+function renderStats(){
+  const total = state.items.filter(r => r.status === 'active').length;
+
+  const chips = [
+    {num: total, lbl:'登録試薬数', cls:''},
+  ];
+  document.getElementById('statsRow').innerHTML = chips.map(c => `
+    <div class="stat-chip ${c.cls}">
+      <span class="num">${c.num}</span>
+      <span class="lbl">${c.lbl}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('countActive').textContent = `(${state.items.filter(r=>r.status==='active').length})`;
+  document.getElementById('countDisposed').textContent = `(${state.items.filter(r=>r.status==='disposed').length})`;
+  document.getElementById('countPending').textContent = `(${state.items.filter(r=>r.status==='pending').length})`;
+}
+
+/* ---------------- Tabs ---------------- */
+document.getElementById('tabActive').addEventListener('click', () => switchTab('active'));
+document.getElementById('tabDisposed').addEventListener('click', () => switchTab('disposed'));
+document.getElementById('tabPending').addEventListener('click', () => switchTab('pending'));
+function switchTab(tab){
+  currentTab = tab;
+  document.getElementById('tabActive').classList.toggle('active', tab==='active');
+  document.getElementById('tabDisposed').classList.toggle('active', tab==='disposed');
+  document.getElementById('tabPending').classList.toggle('active', tab==='pending');
+  populateSortOptions();
+  renderTable();
+}
+
+/* ---------------- Sorting ---------------- */
+const SORT_OPTIONS = [
+  {v:'nameAsc', l:'並び順：品名（あ→ん）'},
+  {v:'nameDesc', l:'並び順：品名（ん→あ）'},
+  {v:'regDateDesc', l:'並び順：日付が新しい順'},
+  {v:'regDateAsc', l:'並び順：日付が古い順'},
+  {v:'cas', l:'並び順：CAS番号順'},
+  {v:'manufacturer', l:'並び順：メーカー順'},
+  {v:'location', l:'並び順：保管場所順'},
+  {v:'qtyDesc', l:'並び順：容量が多い順'},
+  {v:'qtyAsc', l:'並び順：容量が少ない順'},
+];
+function populateSortOptions(){
+  const sel = document.getElementById('sortSelect');
+  const current = sel.value;
+  sel.innerHTML = SORT_OPTIONS.map(o => `<option value="${o.v}">${o.l}</option>`).join('');
+  sel.value = SORT_OPTIONS.some(o => o.v === current) ? current : SORT_OPTIONS[0].v;
+}
+function compareStr(a, b){
+  return (a||'').localeCompare(b||'', 'ja');
+}
+function compareDate(a, b){
+  const ta = a ? new Date(a).getTime() : -Infinity;
+  const tb = b ? new Date(b).getTime() : -Infinity;
+  return ta - tb;
+}
+function sortItems(list, sortValue){
+  const sorted = list.slice();
+  switch(sortValue){
+    case 'nameAsc': sorted.sort((a,b) => compareStr(a.nameJa, b.nameJa)); break;
+    case 'nameDesc': sorted.sort((a,b) => compareStr(b.nameJa, a.nameJa)); break;
+    case 'regDateDesc': sorted.sort((a,b) => compareDate(b.registeredDate, a.registeredDate)); break;
+    case 'regDateAsc': sorted.sort((a,b) => compareDate(a.registeredDate, b.registeredDate)); break;
+    case 'cas': sorted.sort((a,b) => compareStr(a.casNumber, b.casNumber)); break;
+    case 'manufacturer': sorted.sort((a,b) => compareStr(a.manufacturer, b.manufacturer)); break;
+    case 'location': sorted.sort((a,b) => compareStr(a.storageLocation, b.storageLocation)); break;
+    case 'qtyDesc': sorted.sort((a,b) => Number(b.quantity||0) - Number(a.quantity||0)); break;
+    case 'qtyAsc': sorted.sort((a,b) => Number(a.quantity||0) - Number(b.quantity||0)); break;
+    default: sorted.sort((a,b) => compareStr(a.nameJa, b.nameJa));
+  }
+  return sorted;
+}
+
+/* ---------------- Filters ---------------- */
+function populateManufacturerFilter(){
+  const sel = document.getElementById('filterManufacturer');
+  const current = sel.value;
+  const source = state.items.filter(r => r.status === currentTab);
+  const list = Array.from(new Set(source.map(r => r.manufacturer).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));
+  sel.innerHTML = '<option value="">メーカー：すべて</option>' + list.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+  sel.value = current;
+}
+
+function matchesSearch(item, q){
+  if(!q) return true;
+  const hay = [item.nameJa, item.nameEn, item.casNumber].join(' ').toLowerCase();
+  return hay.includes(q);
+}
+
+function getFilteredByStatus(status){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const manufacturer = document.getElementById('filterManufacturer').value;
+  const sortValue = document.getElementById('sortSelect').value;
+
+  const filtered = state.items.filter(r => {
+    if(r.status !== status) return false;
+    if(!matchesSearch(r, q)) return false;
+    if(manufacturer && r.manufacturer !== manufacturer) return false;
+    return true;
+  });
+  return sortItems(filtered, sortValue);
+}
+
+/* ---------------- Rendering: table ---------------- */
+function renderTable(){
+  populateManufacturerFilter();
+  renderItemsTable(currentTab);
+}
+
+function renderItemsTable(status){
+  const dateLabel = DATE_LABEL[status];
+  document.getElementById('tableHead').innerHTML = `
+    <tr>
+      <th>日本語名 / 英語名</th>
+      <th>CAS番号</th>
+      <th>商品コード / QRコード</th>
+      <th>メーカー</th>
+      <th>保管場所</th>
+      <th>容量</th>
+      <th>${dateLabel} / ${PERSON_LABEL[status]}</th>
+    </tr>`;
+
+  const all = state.items.filter(r => r.status === status);
+  const list = getFilteredByStatus(status);
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+
+  const emptyMessages = {
+    active: ['登録された試薬がありません', '「＋ 新規試薬登録」から最初の試薬を登録してください。'],
+    pending: ['保留中の試薬はありません', '試薬の詳細画面から「保留に移動」すると、ここに表示されます。'],
+    disposed: ['廃棄記録はまだありません', '試薬の詳細画面から「廃棄に移動」すると、ここに表示されます。'],
+  };
+
+  if(all.length === 0){
+    tbody.innerHTML = '';
+    empty.hidden = false;
+    if(!isLoaded() && connState !== 'offline'){
+      empty.innerHTML = `<div class="big">試薬台帳を読み込んでいます</div><div>研究室の共有データから登録試薬・保留・廃棄の記録を取得しています。</div>`;
+    } else if(connState === 'offline'){
+      empty.innerHTML = `<div class="big">共有データに接続できません</div><div>claude.ai にサインインし、共有されたリンクからこのアプリを開いてください。</div>`;
+    } else {
+      empty.innerHTML = `<div class="big">${emptyMessages[status][0]}</div><div>${emptyMessages[status][1]}</div>`;
+    }
+    return;
+  }
+  empty.hidden = true;
+
+  if(list.length === 0){
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--ink-faint);">条件に一致する試薬がありません</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(r => `
+    <tr data-id="${r.id}" tabindex="0" class="${isHazardLocation(r.storageLocation) ? 'row-hazard' : ''}">
+      <td data-label="品名">
+        <div class="name-cell">
+          <div class="jname">${hazardMark(r.storageLocation)}${escapeHtml(r.nameJa || '(名称未設定)')}</div>
+          <div class="cas">${escapeHtml(r.nameEn || '')}</div>
+        </div>
+      </td>
+      <td data-label="CAS番号" class="code-cell">${escapeHtml(r.casNumber || '—')}</td>
+      <td data-label="商品コード/QR" class="code-cell">${escapeHtml(r.productCode || '—')}<br>${escapeHtml(r.qrCode || '—')}</td>
+      <td data-label="メーカー">${escapeHtml(r.manufacturer || '—')}</td>
+      <td data-label="保管場所">${escapeHtml(r.storageLocation || '—')}</td>
+      <td data-label="容量" class="qty-cell">${formatQty(r.quantity)} ${escapeHtml(r.unit||'')}</td>
+      <td data-label="${dateLabel}/${PERSON_LABEL[status]}" class="code-cell">${fmtDate(r.registeredDate)}<br>${escapeHtml(r.registeredBy || '—')}</td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('tr[data-id]').forEach(tr => {
+    tr.addEventListener('click', () => openDetail(tr.dataset.id));
+    tr.addEventListener('keydown', ev => { if(ev.key === 'Enter') openDetail(tr.dataset.id); });
+  });
+}
+
+function formatQty(q){
+  const n = Number(q);
+  if(Number.isInteger(n)) return n.toString();
+  return n.toFixed(2).replace(/\.?0+$/,'');
+}
+
+function escapeHtml(s){
+  if(s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function refreshAll(){
+  renderStats();
+  renderTable();
+}
+
+/* ---------------- Detail Drawer ---------------- */
+function openDetail(id){
+  const r = state.items.find(x => x.id === id);
+  if(!r) return;
+  const dateLabel = DATE_LABEL[r.status];
+
+  const otherStatuses = Object.keys(STATUS_LABEL).filter(s => s !== r.status);
+  openDetailId = id;
+
+  const drawer = document.getElementById('drawer');
+  drawer.innerHTML = `
+    <div class="panel-head">
+      <div>
+        <h2>${hazardMark(r.storageLocation)}${escapeHtml(r.nameJa)}</h2>
+        <div class="sub">${escapeHtml(r.nameEn || '')}${r.nameEn ? ' ・ ' : ''}${escapeHtml(r.casNumber || 'CAS未登録')}</div>
+      </div>
+      <button class="icon-btn" id="closeDrawer" aria-label="閉じる">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="qty-hero">
+        <span class="n">${formatQty(r.quantity)}</span>
+        <span class="u">${escapeHtml(r.unit||'')}</span>
+        ${sourceBadge(r.status, STATUS_LABEL[r.status])}
+      </div>
+
+      <div class="drawer-actions write-only">
+        <button class="btn amber" data-action="stockin">＋ 入荷登録</button>
+        ${otherStatuses.map(s => s === 'disposed'
+          ? `<button class="btn" style="background:var(--danger); border-color:var(--danger); color:#fff;" data-move="${s}">廃棄</button>`
+          : `<button class="btn secondary" data-move="${s}">${STATUS_LABEL[s]}に移動</button>`
+        ).join('')}
+        <button class="btn secondary" data-action="edit">編集</button>
+        <button class="btn ghost" data-action="delete">削除</button>
+      </div>
+      <div class="confirm-row write-only" id="deleteConfirm" hidden></div>
+
+      <div class="detail-section">
+        <h3>詳細情報</h3>
+        <div class="kv-grid">
+          <div class="kv"><div class="k">日本語名</div><div class="v">${escapeHtml(r.nameJa || '—')}</div></div>
+          <div class="kv"><div class="k">英語名</div><div class="v">${escapeHtml(r.nameEn || '—')}</div></div>
+          <div class="kv"><div class="k">CAS番号</div><div class="v mono">${escapeHtml(r.casNumber || '—')}</div></div>
+          <div class="kv"><div class="k">QRコード番号</div><div class="v mono">${escapeHtml(r.qrCode || '—')}</div></div>
+          <div class="kv"><div class="k">商品コード</div><div class="v mono">${escapeHtml(r.productCode || '—')}</div></div>
+          <div class="kv"><div class="k">メーカー</div><div class="v">${escapeHtml(r.manufacturer || '—')}</div></div>
+          <div class="kv"><div class="k">保管場所</div><div class="v">${escapeHtml(r.storageLocation || '—')}</div></div>
+          <div class="kv"><div class="k">容量</div><div class="v mono">${formatQty(r.quantity)} ${escapeHtml(r.unit||'')}</div></div>
+          <div class="kv"><div class="k">${dateLabel}</div><div class="v mono">${fmtDate(r.registeredDate)}</div></div>
+          <div class="kv"><div class="k">${PERSON_LABEL[r.status]}</div><div class="v">${escapeHtml(r.registeredBy || '—')}</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  drawer.querySelector('#closeDrawer').addEventListener('click', closeDrawer);
+  drawer.querySelector('[data-action="stockin"]').addEventListener('click', () => openReagentForm(null, r));
+  drawer.querySelectorAll('[data-move]').forEach(btn => {
+    btn.addEventListener('click', () => openMoveForm(id, btn.dataset.move));
+  });
+  drawer.querySelector('[data-action="edit"]').addEventListener('click', () => openReagentForm(r));
+  drawer.querySelector('[data-action="delete"]').addEventListener('click', () => deleteReagent(id));
+
+  document.getElementById('drawerOverlay').hidden = false;
+}
+
+function closeDrawer(){
+  openDetailId = null;
+  document.getElementById('drawerOverlay').hidden = true;
+}
+document.getElementById('drawerOverlay').addEventListener('click', (e) => {
+  if(e.target.id === 'drawerOverlay') closeDrawer();
+});
+
+/* ---------------- Reagent Form (create / edit) ---------------- */
+function openReagentForm(existing, prefillFrom){
+  const isEdit = !!existing;
+  const isStockIn = !isEdit && !!prefillFrom;
+  const r = existing || (prefillFrom ? {
+    nameJa: prefillFrom.nameJa,
+    nameEn: prefillFrom.nameEn,
+    casNumber: prefillFrom.casNumber,
+    qrCode: '',
+    productCode: prefillFrom.productCode,
+    manufacturer: prefillFrom.manufacturer,
+    storageLocation: prefillFrom.storageLocation,
+    quantity: prefillFrom.quantity,
+    unit: prefillFrom.unit,
+    registeredDate: '',
+    registeredBy: '',
+  } : {});
+  const modal = document.getElementById('formModal');
+
+  modal.innerHTML = `
+    <div class="panel-head">
+      <div>
+        <h2>${isEdit ? '試薬情報を編集' : isStockIn ? '入荷登録' : '新規試薬登録'}</h2>
+        ${isStockIn ? `<div class="sub">${escapeHtml(prefillFrom.nameJa)} の新しいボトルを登録します。QRコード番号・登録日・登録者を入力してください。</div>` : ''}
+      </div>
+      <button class="icon-btn" id="closeForm" aria-label="閉じる">✕</button>
+    </div>
+    <div class="panel-body">
+      <form id="reagentForm">
+        <div class="form-grid">
+          <div class="form-field">
+            <label>日本語名 *</label>
+            <input required name="nameJa" value="${escapeHtml(r.nameJa||'')}" placeholder="例：塩化ナトリウム">
+          </div>
+          <div class="form-field">
+            <label>英語名</label>
+            <input name="nameEn" value="${escapeHtml(r.nameEn||'')}" placeholder="例：Sodium Chloride">
+          </div>
+          <div class="form-field">
+            <label>CAS番号</label>
+            <input name="casNumber" value="${escapeHtml(r.casNumber||'')}" placeholder="例：7647-14-5">
+          </div>
+          <div class="form-field">
+            <label>QRコード番号${isStockIn ? ' *' : ''}</label>
+            <input ${isStockIn?'required':''} name="qrCode" value="${escapeHtml(r.qrCode||'')}" placeholder="ラベルのQRコード値">
+          </div>
+          <div class="form-field">
+            <label>商品コード</label>
+            <input name="productCode" value="${escapeHtml(r.productCode||'')}">
+          </div>
+          <div class="form-field">
+            <label>メーカー</label>
+            <input name="manufacturer" value="${escapeHtml(r.manufacturer||'')}">
+          </div>
+          <div class="form-field span2">
+            <label>保管場所</label>
+            <input name="storageLocation" value="${escapeHtml(r.storageLocation||'')}" placeholder="例：薬品棚A-3">
+          </div>
+          <div class="form-field">
+            <label>容量 *</label>
+            <input required type="number" step="any" min="0" name="quantity" value="${r.quantity ?? ''}">
+          </div>
+          <div class="form-field">
+            <label>容量の単位 *</label>
+            <select required name="unit">
+              <option value="">選択</option>
+              ${UNITS.map(u => `<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-field">
+            <label>登録日 *</label>
+            <input required type="date" name="registeredDate" value="${r.registeredDate || todayStr()}">
+          </div>
+          <div class="form-field">
+            <label>登録者 *</label>
+            <input required name="registeredBy" value="${escapeHtml(isEdit ? (r.registeredBy||'') : lastRegistrant())}">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn secondary" id="cancelForm">キャンセル</button>
+          <button type="submit" class="btn amber">${isEdit ? '保存する' : isStockIn ? '入荷を登録' : '登録する'}</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  modal.querySelector('#closeForm').addEventListener('click', closeFormModal);
+  modal.querySelector('#cancelForm').addEventListener('click', closeFormModal);
+  modal.querySelector('#reagentForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = {
+      nameJa: fd.get('nameJa').trim(),
+      nameEn: fd.get('nameEn').trim(),
+      casNumber: fd.get('casNumber').trim(),
+      qrCode: fd.get('qrCode').trim(),
+      productCode: fd.get('productCode').trim(),
+      manufacturer: fd.get('manufacturer').trim(),
+      storageLocation: fd.get('storageLocation').trim(),
+      quantity: parseFloat(fd.get('quantity')),
+      unit: fd.get('unit'),
+      registeredDate: fd.get('registeredDate'),
+      registeredBy: fd.get('registeredBy').trim(),
+    };
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    rememberRegistrant(data.registeredBy);
+    const id = isEdit ? r.id : uid('it');
+    data.status = isEdit ? r.status : 'active';
+    saveItem(id, data).then(ok => {
+      submitBtn.disabled = false;
+      if(!ok) return;
+      closeFormModal();
+      if(isEdit || isStockIn){
+        openDetailId = id;
+        document.getElementById('drawerOverlay').hidden = false;
+        scheduleRender();
+      }
+    });
+  });
+
+  document.getElementById('formOverlay').hidden = false;
+}
+function closeFormModal(){
+  document.getElementById('formOverlay').hidden = true;
+}
+document.getElementById('formOverlay').addEventListener('click', (e) => {
+  if(e.target.id === 'formOverlay') closeFormModal();
+});
+
+document.getElementById('addReagentBtn').addEventListener('click', () => openReagentForm(null));
+
+/* ---------------- Move between pages (登録 / 保留 / 廃棄) ---------------- */
+function openMoveForm(id, targetStatus){
+  const r = state.items.find(x => x.id === id);
+  if(!r) return;
+  const modal = document.getElementById('txModal');
+  const dateLabel = DATE_LABEL[targetStatus];
+
+  modal.innerHTML = `
+    <div class="panel-head">
+      <div>
+        <h2>${STATUS_LABEL[targetStatus]}に移動</h2>
+        <div class="sub">${escapeHtml(r.nameJa)} を「${STATUS_LABEL[r.status]}」から「${STATUS_LABEL[targetStatus]}」に移動します</div>
+      </div>
+      <button class="icon-btn" id="closeTx" aria-label="閉じる">✕</button>
+    </div>
+    <div class="panel-body">
+      <form id="moveForm">
+        <div class="form-grid">
+          <div class="form-field">
+            <label>${dateLabel} *</label>
+            <input required type="date" name="date" value="${todayStr()}">
+          </div>
+          <div class="form-field">
+            <label>${PERSON_LABEL[targetStatus]} *</label>
+            <input required name="registeredBy" value="${targetStatus === 'disposed' ? '' : escapeHtml(lastRegistrant() || r.registeredBy || '')}" placeholder="${targetStatus === 'disposed' ? '廃棄した人の名前' : ''}">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn secondary" id="cancelTx">キャンセル</button>
+          <button type="submit" class="btn amber">${STATUS_LABEL[targetStatus]}に移動する</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  modal.querySelector('#closeTx').addEventListener('click', closeTxModal);
+  modal.querySelector('#cancelTx').addEventListener('click', closeTxModal);
+  modal.querySelector('#moveForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const registeredBy = fd.get('registeredBy').trim();
+    rememberRegistrant(registeredBy);
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    patchItem(id, {
+      status: targetStatus,
+      registeredDate: fd.get('date'),
+      registeredBy,
+    }).then(ok => {
+      submitBtn.disabled = false;
+      if(ok) closeTxModal();
+    });
+  });
+
+  document.getElementById('txOverlay').hidden = false;
+}
+function closeTxModal(){
+  document.getElementById('txOverlay').hidden = true;
+}
+document.getElementById('txOverlay').addEventListener('click', (e) => {
+  if(e.target.id === 'txOverlay') closeTxModal();
+});
+
+/* ---------------- Delete ---------------- */
+function deleteReagent(id){
+  const r = state.items.find(x => x.id === id);
+  if(!r) return;
+  const box = document.getElementById('deleteConfirm');
+  box.innerHTML = `
+    <span>「${escapeHtml(r.nameJa)}」を台帳から完全に削除します。廃棄記録として残す場合は「廃棄」を使ってください。</span>
+    <button class="btn danger" id="confirmDelete">削除する</button>
+    <button class="btn secondary" id="cancelDelete">やめる</button>`;
+  box.hidden = false;
+  box.querySelector('#cancelDelete').addEventListener('click', () => { box.hidden = true; });
+  box.querySelector('#confirmDelete').addEventListener('click', async () => {
+    if(await removeItem(id)) closeDrawer();
+  });
+}
+
+
+/* ---------------- Excel export (same layout as the lab's 薬品管理 workbook) ---------------- */
+const EXCELJS_URL = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+let excelJsPromise = null;
+function loadExcelJs(){
+  if(window.ExcelJS) return Promise.resolve(window.ExcelJS);
+  if(!excelJsPromise){
+    excelJsPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = EXCELJS_URL;
+      s.onload = () => window.ExcelJS ? resolve(window.ExcelJS) : reject(new Error('ExcelJS missing'));
+      s.onerror = () => { excelJsPromise = null; reject(new Error('ExcelJS failed to load')); };
+      document.head.appendChild(s);
+    });
+  }
+  return excelJsPromise;
+}
+
+const XL_GREEN = 'FFB6D7A8';
+// Columns A–K. `green` marks the striped columns of the original workbook.
+const XL_COLUMNS = [
+  {key: 'nameJa',          width: 29.78, green: false},
+  {key: 'nameEn',          width: 33.44, green: true},
+  {key: 'casNumber',       width: 11.67, green: false, text: true},
+  {key: 'qrCode',          width: 9.89,  green: true,  left: true},
+  {key: 'productCode',     width: 11,    green: false, left: true},
+  {key: 'quantity',        width: 6.56,  green: true},
+  {key: 'unit',            width: 4,     green: true},
+  {key: 'manufacturer',    width: 12.22, green: false},
+  {key: 'storageLocation', width: 10,    green: true},
+  {key: 'registeredDate',  width: 10,    green: false, date: true},
+  {key: 'registeredBy',    width: 7.56,  green: true},
+];
+
+function parseIsoDate(s){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
+}
+
+// One sheet per list, in the same order as the original workbook.
+const XL_SHEET_ORDER = ['active', 'disposed', 'pending'];
+
+function buildInventoryWorkbook(ExcelJS, sortValue){
+  const wb = new ExcelJS.Workbook();
+  XL_SHEET_ORDER.forEach(status => {
+    const items = sortItems(state.items.filter(r => r.status === status), sortValue);
+    addInventorySheet(wb, status, items);
+  });
+  return wb;
+}
+
+function addInventorySheet(wb, status, items){
+  const ws = wb.addWorksheet(STATUS_LABEL[status], {views: [{state: 'frozen', ySplit: 2}]});
+  ws.columns = XL_COLUMNS.map(c => ({width: c.width}));
+  const headers = ['試薬名 (日本語)', 'reagent name', 'CAS', 'QRコード', '商品コード', '容量', '',
+                   '試薬メーカー', '保管場所', DATE_LABEL[status], PERSON_LABEL[status]];
+  const thin = {style: 'thin'};
+  const border = {top: thin, left: thin, bottom: thin, right: thin};
+  const green = {type: 'pattern', pattern: 'solid', fgColor: {argb: XL_GREEN}};
+
+  function styleCell(cell, col, bold){
+    cell.font = {name: 'Arial', size: 12, bold};
+    cell.border = border;
+    if(col.green) cell.fill = green;
+    if(col.text) cell.numFmt = '@';
+    cell.alignment = {vertical: 'middle', horizontal: col.left ? 'left' : undefined};
+  }
+
+  const band = ws.getRow(1);
+  XL_COLUMNS.forEach((col, i) => styleCell(band.getCell(i + 1), col, false));
+  const head = ws.getRow(2);
+  XL_COLUMNS.forEach((col, i) => {
+    const cell = head.getCell(i + 1);
+    cell.value = headers[i] || null;
+    styleCell(cell, col, true);
+  });
+
+  items.forEach((r, n) => {
+    const row = ws.getRow(n + 3);
+    XL_COLUMNS.forEach((col, i) => {
+      const cell = row.getCell(i + 1);
+      let v = r[col.key];
+      if(col.key === 'quantity'){
+        const num = Number(v);
+        v = v === '' || v == null || !Number.isFinite(num) ? null : num;
+      } else if(col.date){
+        const d = parseIsoDate(v);
+        v = d || v || null;
+      } else {
+        v = v == null || v === '' ? null : String(v);
+      }
+      cell.value = v;
+      styleCell(cell, col, false);
+      if(col.date && v instanceof Date) cell.numFmt = 'mm-dd-yy';
+    });
+  });
+}
+
+async function exportExcel(){
+  const btn = document.getElementById('exportXlsxBtn');
+  btn.disabled = true;
+  try{
+    const buf = await makeWorkbookBuffer();
+    const blob = new Blob([buf], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const dl = await window.claude.use('downloads');
+    if(!dl){ showStorageNotice('この画面ではExcelファイルを保存できません。'); return; }
+    await dl.save({filename: `試薬台帳_${todayStr()}.xlsx`, data: blob});
+  }catch(e){
+    if(e && e.code === 'declined') return;
+    console.error('Excel出力に失敗しました', e);
+    showStorageNotice('Excelファイルを作成できませんでした。インターネット接続を確認して、もう一度お試しください。');
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('exportXlsxBtn').addEventListener('click', exportExcel);
+
+/* ---------------- Handover (引継ぎ) ----------------
+   Export: one zip with the app itself, all data as Excel and the steps.
+   Import: the owner of a freshly published copy reads that Excel back in.
+   Imported rows get ids derived from sheet + row, so importing the same
+   file again overwrites instead of duplicating. */
+const JSZIP_URL = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+const APP_SOURCE_PATH = 'app/reagent_inventory.html';
+const SHEET_STATUS = { '使用中': 'active', '廃棄': 'disposed', '保留': 'pending' };
+const STATUS_ID_PREFIX = { active: 'a', disposed: 'd', pending: 'p' };
+const SUCCESSOR_PROMPT = '添付の reagent_inventory.html を、研究室の試薬台帳アプリとしてアーティファクトで公開してください。' +
+  'capabilities は db・user・downloads を有効にしてください。' +
+  'また、次の引継ぎで使うので、同じファイルを app/reagent_inventory.html というパスの付属ファイル（files）としても一緒に公開してください。';
+let jsZipPromise = null;
+let isAppOwner = false;
+
+function loadScriptOnce(url, globalName){
+  if(window[globalName]) return Promise.resolve(window[globalName]);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = () => window[globalName] ? resolve(window[globalName]) : reject(new Error(globalName + ' missing'));
+    s.onerror = () => reject(new Error(globalName + ' failed to load'));
+    document.head.appendChild(s);
+  });
+}
+function loadJsZip(){
+  if(!jsZipPromise) jsZipPromise = loadScriptOnce(JSZIP_URL, 'JSZip').catch(e => { jsZipPromise = null; throw e; });
+  return jsZipPromise;
+}
+
+async function makeWorkbookBuffer(){
+  const ExcelJS = await loadExcelJs();
+  const wb = buildInventoryWorkbook(ExcelJS, document.getElementById('sortSelect').value);
+  return wb.xlsx.writeBuffer();
+}
+
+function handoverSteps(hasAppFile){
+  return [
+    '試薬台帳アプリ 引継ぎ手順',
+    '',
+    'このフォルダの中身',
+    hasAppFile ? '  reagent_inventory.html … アプリ本体' : '  （アプリ本体は取得できませんでした。前任者からHTMLファイルを受け取ってください）',
+    `  試薬台帳_${todayStr()}.xlsx … 全データ（使用中・廃棄・保留の3シート）`,
+    '',
+    '後任者が行うこと',
+    '1. claude.ai に自分のアカウントでサインインし、新しいチャットを開く。',
+    '2. reagent_inventory.html を添付し、次の文章を貼り付けて送信する。',
+    '',
+    '   ' + SUCCESSOR_PROMPT,
+    '',
+    '3. 公開されたアプリを開き、右上の「引継ぎ」→「Excelから取り込み」で、上のExcelファイルを選ぶ。',
+    '4. 取り込みが終わったら、件数がExcelと同じか確認する。',
+    '5. 「共有（Share）」から研究室メンバーを Contributor または Editor で追加し、新しいリンクを全員に知らせる。',
+    '',
+    '前任者が行うこと',
+    '・後任者のアプリで件数を確認できたら、古いアプリのリンクは使わないようメンバーに伝える。',
+    '',
+  ].join('\r\n');
+}
+
+async function exportHandoverPackage(){
+  const btn = document.getElementById('handoverExportBtn');
+  const status = document.getElementById('handoverExportStatus');
+  btn.disabled = true;
+  status.textContent = '引継ぎファイルを作成しています…';
+  try{
+    const [JSZip, xlsxBuf] = await Promise.all([loadJsZip(), makeWorkbookBuffer()]);
+    let appSource = null;
+    try{
+      const res = await fetch(APP_SOURCE_PATH, {cache: 'no-store'});
+      if(res.ok) appSource = await res.text();
+    }catch(e){}
+    const zip = new JSZip();
+    const folder = zip.folder(`試薬台帳_引継ぎ_${todayStr()}`);
+    if(appSource) folder.file('reagent_inventory.html', appSource);
+    folder.file(`試薬台帳_${todayStr()}.xlsx`, xlsxBuf);
+    folder.file('引継ぎ手順.txt', '﻿' + handoverSteps(!!appSource));
+    const blob = await zip.generateAsync({type: 'blob'});
+    const dl = await window.claude.use('downloads');
+    if(!dl){ status.textContent = 'この画面ではファイルを保存できません。'; return; }
+    await dl.save({filename: `試薬台帳_引継ぎ_${todayStr()}.zip`, data: blob});
+    status.textContent = appSource
+      ? '保存しました。このzipファイルを後任者に渡してください。'
+      : '保存しました。ただしアプリ本体を取得できなかったため、zipにはデータと手順だけが入っています。';
+  }catch(e){
+    if(e && e.code === 'declined'){ status.textContent = ''; return; }
+    console.error('引継ぎファイルの作成に失敗しました', e);
+    status.textContent = '引継ぎファイルを作成できませんでした。インターネット接続を確認して、もう一度お試しください。';
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+/* -- Import -- */
+function cellText(v){
+  if(v == null) return '';
+  if(v instanceof Date) return v.toISOString().slice(0, 10);
+  if(typeof v === 'object'){
+    if(Array.isArray(v.richText)) return v.richText.map(t => t.text).join('').trim();
+    if('result' in v) return cellText(v.result);
+    if('text' in v) return cellText(v.text);
+    return '';
+  }
+  return String(v).trim();
+}
+function normalizeDate(v){
+  if(v instanceof Date) return v.toISOString().slice(0, 10);
+  const s = cellText(v);
+  const m = /^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/.exec(s);
+  return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : s;
+}
+function normalizeQuantity(v){
+  if(typeof v === 'number') return v;
+  const n = parseFloat(cellText(v));
+  return Number.isFinite(n) ? n : '';
+}
+
+/* Reads a workbook laid out like the Excel export (or the lab's original
+   薬品管理 workbook) into [{id, data}] rows. */
+function parseInventoryWorkbook(wb){
+  const rows = [];
+  const counts = {active: 0, disposed: 0, pending: 0};
+  wb.eachSheet(ws => {
+    const status = SHEET_STATUS[ws.name.trim()];
+    if(!status) return;
+    let first = 1;
+    for(let r = 1; r <= Math.min(5, ws.rowCount); r++){
+      if(cellText(ws.getRow(r).getCell(1).value).startsWith('試薬名')){ first = r + 1; break; }
+    }
+    for(let r = first; r <= ws.rowCount; r++){
+      const row = ws.getRow(r);
+      const v = i => row.getCell(i).value;
+      const data = {
+        nameJa: cellText(v(1)),
+        nameEn: cellText(v(2)),
+        casNumber: cellText(v(3)),
+        qrCode: cellText(v(4)),
+        productCode: cellText(v(5)),
+        quantity: normalizeQuantity(v(6)),
+        unit: cellText(v(7)),
+        manufacturer: cellText(v(8)),
+        storageLocation: cellText(v(9)),
+        registeredDate: normalizeDate(v(10)),
+        registeredBy: cellText(v(11)),
+        status,
+      };
+      if(!data.nameJa && !data.nameEn && !data.casNumber && !data.qrCode && !data.productCode) continue;
+      rows.push({id: `imp-${STATUS_ID_PREFIX[status]}-${r}`, data});
+      counts[status]++;
+    }
+  });
+  return {rows, counts};
+}
+
+async function writeWithRetry(id, data){
+  for(let attempt = 0; ; attempt++){
+    try{
+      await itemRef(id).set(data);
+      return;
+    }catch(e){
+      const code = e && e.code;
+      if((code === 'unavailable' || code === 'resource_exhausted') && attempt < 6){
+        await new Promise(r => setTimeout(r, 500 * 2 ** attempt + Math.random() * 300));
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
+let pendingImport = null;
+
+async function readImportFile(file){
+  const status = document.getElementById('importStatus');
+  const confirmBox = document.getElementById('importConfirm');
+  confirmBox.hidden = true;
+  pendingImport = null;
+  status.textContent = 'ファイルを読み込んでいます…';
+  try{
+    const ExcelJS = await loadExcelJs();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(await file.arrayBuffer());
+    const parsed = parseInventoryWorkbook(wb);
+    if(parsed.rows.length === 0){
+      status.textContent = '取り込める試薬が見つかりませんでした。「使用中」「廃棄」「保留」という名前のシートがあるExcelファイルを選んでください。';
+      return;
+    }
+    pendingImport = parsed;
+    const c = parsed.counts;
+    const existing = state.items.length;
+    status.textContent = '';
+    confirmBox.innerHTML = `
+      <div>取り込む件数：使用中 ${c.active}件・廃棄 ${c.disposed}件・保留 ${c.pending}件（合計 ${parsed.rows.length}件）</div>
+      ${existing > 0 ? `<label class="check-row"><input type="checkbox" id="importAppend"> このアプリには既に ${existing}件のデータがあります。重複する可能性を理解した上で追加する</label>` : ''}
+      <div class="form-actions" style="margin-top:12px;">
+        <button type="button" class="btn secondary" id="importCancel">やめる</button>
+        <button type="button" class="btn amber" id="importRun" ${existing > 0 ? 'disabled' : ''}>取り込む</button>
+      </div>`;
+    confirmBox.hidden = false;
+    const runBtn = confirmBox.querySelector('#importRun');
+    const append = confirmBox.querySelector('#importAppend');
+    if(append) append.addEventListener('change', () => { runBtn.disabled = !append.checked; });
+    confirmBox.querySelector('#importCancel').addEventListener('click', () => {
+      confirmBox.hidden = true; pendingImport = null;
+      document.getElementById('importFile').value = '';
+    });
+    runBtn.addEventListener('click', runImport);
+  }catch(e){
+    console.error('Excelの読み込みに失敗しました', e);
+    status.textContent = 'このファイルを読み込めませんでした。アプリの「Excel出力」や引継ぎファイルに入っている .xlsx ファイルを選んでください。';
+  }
+}
+
+async function runImport(){
+  if(!pendingImport) return;
+  const {rows, counts} = pendingImport;
+  const status = document.getElementById('importStatus');
+  const confirmBox = document.getElementById('importConfirm');
+  const fileInput = document.getElementById('importFile');
+  confirmBox.hidden = true;
+  fileInput.disabled = true;
+  let done = 0;
+  let failed = null;
+  let next = 0;
+  status.textContent = `取り込み中… 0 / ${rows.length}件（画面を閉じないでください）`;
+  async function worker(){
+    while(!failed && next < rows.length){
+      const {id, data} = rows[next++];
+      try{
+        await writeWithRetry(id, data);
+        done++;
+        if(done % 10 === 0 || done === rows.length){
+          status.textContent = `取り込み中… ${done} / ${rows.length}件（画面を閉じないでください）`;
+        }
+      }catch(e){ failed = e; }
+    }
+  }
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  fileInput.disabled = false;
+  fileInput.value = '';
+  pendingImport = null;
+  if(failed){
+    console.error('取り込みに失敗しました', failed);
+    const code = failed.code;
+    status.textContent = `${done}件まで取り込んだところで止まりました。` + (
+      code === 'quota_exceeded' ? 'データベースの容量が上限に達しています。' :
+      code === 'invalid_argument' ? 'このアカウントには書き込み権限がありません。' :
+      '同じファイルをもう一度取り込むと、続きから正しく反映されます（取り込み済みの行は上書きされるだけで重複しません）。');
+    return;
+  }
+  status.textContent = `取り込みが完了しました：使用中 ${counts.active}件・廃棄 ${counts.disposed}件・保留 ${counts.pending}件。`;
+}
+
+function openHandover(){
+  const modal = document.getElementById('handoverModal');
+  modal.innerHTML = `
+    <div class="panel-head">
+      <div>
+        <h2>引継ぎ</h2>
+        <div class="sub">アプリとデータを後任者のアカウントに移します</div>
+      </div>
+      <button class="icon-btn" id="closeHandover" aria-label="閉じる">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="detail-section">
+        <h3>前任者：引継ぎファイルを作る</h3>
+        <p class="handover-text">アプリ本体・全データ（Excel）・手順書を1つのzipファイルにまとめて保存します。このzipファイルを後任者に渡してください。</p>
+        <button class="btn amber" id="handoverExportBtn">引継ぎファイルを保存</button>
+        <div class="handover-status" id="handoverExportStatus" role="status"></div>
+      </div>
+      <div class="detail-section">
+        <h3>後任者：自分のアカウントでアプリを作る</h3>
+        <p class="handover-text">claude.ai の新しいチャットに zip 内の <code>reagent_inventory.html</code> を添付し、次の文章を送ってください。</p>
+        <div class="prompt-box" id="successorPrompt">${escapeHtml(SUCCESSOR_PROMPT)}</div>
+        <button class="btn secondary" id="copyPromptBtn">文章をコピー</button>
+        <span class="handover-status" id="copyStatus" role="status"></span>
+      </div>
+      <div class="detail-section">
+        <h3>後任者：データを取り込む</h3>
+        ${isAppOwner && canWrite ? `
+          <p class="handover-text">新しいアプリでここを開き、zip 内の Excel ファイルを選んでください。使用中・廃棄・保留の3シートがそのまま取り込まれます。</p>
+          <input type="file" id="importFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <div class="handover-status" id="importStatus" role="status"></div>
+          <div class="import-confirm" id="importConfirm" hidden></div>
+        ` : `
+          <p class="handover-text">データの取り込みは、アプリの持ち主だけが行えます。後任者が自分のアカウントで公開したアプリで、この画面を開いてください。</p>
+        `}
+      </div>
+      <div class="detail-section">
+        <h3>最後に</h3>
+        <p class="handover-text">新しいアプリの「共有（Share）」から研究室メンバーを Contributor または Editor で追加し、新しいリンクを全員に知らせてください。古いアプリは使わないよう伝えてください。</p>
+      </div>
+    </div>`;
+  modal.querySelector('#closeHandover').addEventListener('click', closeHandover);
+  modal.querySelector('#handoverExportBtn').addEventListener('click', exportHandoverPackage);
+  modal.querySelector('#copyPromptBtn').addEventListener('click', () => {
+    const out = modal.querySelector('#copyStatus');
+    navigator.clipboard.writeText(SUCCESSOR_PROMPT).then(() => { out.textContent = 'コピーしました'; }).catch(() => {
+      const range = document.createRange();
+      range.selectNodeContents(modal.querySelector('#successorPrompt'));
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      out.textContent = '文章を選択しました。コピーしてください。';
+    });
+  });
+  const fileInput = modal.querySelector('#importFile');
+  if(fileInput) fileInput.addEventListener('change', () => { if(fileInput.files[0]) readImportFile(fileInput.files[0]); });
+  document.getElementById('handoverOverlay').hidden = false;
+}
+function closeHandover(){
+  if(document.getElementById('importFile')?.disabled) return; // import in progress
+  document.getElementById('handoverOverlay').hidden = true;
+}
+document.getElementById('handoverOverlay').addEventListener('click', e => {
+  if(e.target.id === 'handoverOverlay') closeHandover();
+});
+document.getElementById('handoverBtn').addEventListener('click', openHandover);
+
+
+
+/* ---------------- Duplicate reagents (使用中・保留のみ、廃棄は含めない) ---------------- */
+function getDuplicateGroups(){
+  const groups = new Map();
+  state.items.filter(r => r.status !== 'disposed').forEach(r => {
+    const key = (r.casNumber && r.casNumber.trim()) || (r.nameJa && r.nameJa.trim()) || r.id;
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  });
+  return Array.from(groups.values())
+    .filter(g => g.length > 1)
+    .sort((a,b) => b.length - a.length);
+}
+function sourceBadge(status, label){
+  const cls = status === 'disposed' ? 'disposed' : status === 'active' ? 'ok' : '';
+  const style = status === 'pending' ? 'background:var(--amber-soft); color:var(--amber-deep);' : '';
+  return `<span class="badge ${cls}" style="${style}">${label}</span>`;
+}
+
+function openDuplicates(){
+  const groups = getDuplicateGroups();
+  const modal = document.getElementById('dupModal');
+  modal.innerHTML = `
+    <div class="panel-head">
+      <div>
+        <h2>重複試薬一覧</h2>
+        <div class="sub">同じCAS番号（CAS未登録の場合は同じ日本語名）が、使用中・保留のいずれかに複数件ある試薬 ／ ${groups.length}件</div>
+      </div>
+      <button class="icon-btn" id="closeDup" aria-label="閉じる">✕</button>
+    </div>
+    <div class="panel-body">
+      ${groups.length === 0 ? '<div class="empty-timeline">重複している試薬はありません。</div>' : groups.map(g => `
+        <div class="detail-section">
+          <h3>${hazardMark(g.find(x => isHazardLocation(x.storageLocation))?.storageLocation)}${escapeHtml(g[0].nameJa)} <span style="font-family:var(--font-mono); font-weight:400; font-size:12px; color:var(--ink-soft);">／ ${escapeHtml(g[0].casNumber || 'CAS未登録')} ／ ${g.length}件</span></h3>
+          <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+            <thead>
+              <tr style="text-align:left; color:var(--ink-soft); font-size:11px;">
+                <th style="padding:4px 8px 4px 0;">状態</th>
+                <th style="padding:4px 8px;">QRコード</th>
+                <th style="padding:4px 8px;">商品コード</th>
+                <th style="padding:4px 8px;">保管場所</th>
+                <th style="padding:4px 8px;">容量</th>
+                <th style="padding:4px 8px;">日付</th>
+                <th style="padding:4px 0 4px 8px;">登録者</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${g.map(r => `
+                <tr data-id="${r.id}" style="cursor:pointer; border-top:1px solid var(--border);">
+                  <td style="padding:5px 8px 5px 0;">${sourceBadge(r.status, STATUS_LABEL[r.status])}</td>
+                  <td style="padding:5px 8px; font-family:var(--font-mono);">${escapeHtml(r.qrCode || '—')}</td>
+                  <td style="padding:5px 8px; font-family:var(--font-mono);">${escapeHtml(r.productCode || '—')}</td>
+                  <td style="padding:5px 8px;">${escapeHtml(r.storageLocation || '—')}</td>
+                  <td style="padding:5px 8px; font-family:var(--font-mono);">${formatQty(r.quantity)} ${escapeHtml(r.unit||'')}</td>
+                  <td style="padding:5px 8px; font-family:var(--font-mono);">${fmtDate(r.registeredDate)}</td>
+                  <td style="padding:5px 0 5px 8px;">${escapeHtml(r.registeredBy || '—')}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  modal.querySelector('#closeDup').addEventListener('click', closeDuplicates);
+  modal.querySelectorAll('tr[data-id]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      closeDuplicates();
+      openDetail(tr.dataset.id);
+    });
+  });
+  document.getElementById('dupOverlay').hidden = false;
+}
+function closeDuplicates(){
+  document.getElementById('dupOverlay').hidden = true;
+}
+document.getElementById('dupOverlay').addEventListener('click', (e) => {
+  if(e.target.id === 'dupOverlay') closeDuplicates();
+});
+document.getElementById('duplicatesBtn').addEventListener('click', openDuplicates);
+
+/* ---------------- Filters ---------------- */
+document.getElementById('searchInput').addEventListener('input', renderTable);
+document.getElementById('filterManufacturer').addEventListener('change', renderTable);
+document.getElementById('sortSelect').addEventListener('change', renderTable);
+
+/* ---------------- Init ---------------- */
+(function init(){
+  populateSortOptions();
+  refreshAll();
+  connectData();
+})();
+</script>
