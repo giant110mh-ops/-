@@ -488,6 +488,7 @@ body.readonly .write-only{display:none !important;}
   </div>
   <div class="toolbar-right">
     <button class="btn secondary" id="duplicatesBtn">重複試薬一覧</button>
+    <button class="btn secondary" id="exportXlsxBtn">Excel出力</button>
     <button class="btn secondary" id="exportBtn">CSV出力</button>
     <button class="btn amber write-only" id="addReagentBtn">＋ 新規試薬登録</button>
   </div>
@@ -1212,6 +1213,117 @@ function downloadCsv(headers, rows, filename){
   });
 }
 document.getElementById('exportBtn').addEventListener('click', exportCsv);
+
+/* ---------------- Excel export (same layout as the lab's 薬品管理 workbook) ---------------- */
+const EXCELJS_URL = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+let excelJsPromise = null;
+function loadExcelJs(){
+  if(window.ExcelJS) return Promise.resolve(window.ExcelJS);
+  if(!excelJsPromise){
+    excelJsPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = EXCELJS_URL;
+      s.onload = () => window.ExcelJS ? resolve(window.ExcelJS) : reject(new Error('ExcelJS missing'));
+      s.onerror = () => { excelJsPromise = null; reject(new Error('ExcelJS failed to load')); };
+      document.head.appendChild(s);
+    });
+  }
+  return excelJsPromise;
+}
+
+const XL_GREEN = 'FFB6D7A8';
+// Columns A–K. `green` marks the striped columns of the original workbook.
+const XL_COLUMNS = [
+  {key: 'nameJa',          width: 29.78, green: false},
+  {key: 'nameEn',          width: 33.44, green: true},
+  {key: 'casNumber',       width: 11.67, green: false, text: true},
+  {key: 'qrCode',          width: 9.89,  green: true,  left: true},
+  {key: 'productCode',     width: 11,    green: false, left: true},
+  {key: 'quantity',        width: 6.56,  green: true},
+  {key: 'unit',            width: 4,     green: true},
+  {key: 'manufacturer',    width: 12.22, green: false},
+  {key: 'storageLocation', width: 10,    green: true},
+  {key: 'registeredDate',  width: 10,    green: false, date: true},
+  {key: 'registeredBy',    width: 7.56,  green: true},
+];
+
+function parseIsoDate(s){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
+}
+
+function buildInventoryWorkbook(ExcelJS, status, items){
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(STATUS_LABEL[status], {views: [{state: 'frozen', ySplit: 2}]});
+  ws.columns = XL_COLUMNS.map(c => ({width: c.width}));
+  const headers = ['試薬名 (日本語)', 'reagent name', 'CAS', 'QRコード', '商品コード', '容量', '',
+                   '試薬メーカー', '保管場所', DATE_LABEL[status], PERSON_LABEL[status]];
+  const thin = {style: 'thin'};
+  const border = {top: thin, left: thin, bottom: thin, right: thin};
+  const green = {type: 'pattern', pattern: 'solid', fgColor: {argb: XL_GREEN}};
+
+  function styleCell(cell, col, bold){
+    cell.font = {name: 'Arial', size: 12, bold};
+    cell.border = border;
+    if(col.green) cell.fill = green;
+    if(col.text) cell.numFmt = '@';
+    cell.alignment = {vertical: 'middle', horizontal: col.left ? 'left' : undefined};
+  }
+
+  const band = ws.getRow(1);
+  XL_COLUMNS.forEach((col, i) => styleCell(band.getCell(i + 1), col, false));
+  const head = ws.getRow(2);
+  XL_COLUMNS.forEach((col, i) => {
+    const cell = head.getCell(i + 1);
+    cell.value = headers[i] || null;
+    styleCell(cell, col, true);
+  });
+
+  items.forEach((r, n) => {
+    const row = ws.getRow(n + 3);
+    XL_COLUMNS.forEach((col, i) => {
+      const cell = row.getCell(i + 1);
+      let v = r[col.key];
+      if(col.key === 'quantity'){
+        const num = Number(v);
+        v = v === '' || v == null || !Number.isFinite(num) ? null : num;
+      } else if(col.date){
+        const d = parseIsoDate(v);
+        v = d || v || null;
+      } else {
+        v = v == null || v === '' ? null : String(v);
+      }
+      cell.value = v;
+      styleCell(cell, col, false);
+      if(col.date && v instanceof Date) cell.numFmt = 'mm-dd-yy';
+    });
+  });
+  return wb;
+}
+
+async function exportExcel(){
+  const btn = document.getElementById('exportXlsxBtn');
+  btn.disabled = true;
+  try{
+    const ExcelJS = await loadExcelJs();
+    const items = sortItems(state.items.filter(r => r.status === currentTab),
+                            document.getElementById('sortSelect').value);
+    const wb = buildInventoryWorkbook(ExcelJS, currentTab, items);
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const dl = await window.claude.use('downloads');
+    if(!dl){ showStorageNotice('この画面ではExcelファイルを保存できません。'); return; }
+    await dl.save({filename: `試薬台帳_${STATUS_LABEL[currentTab]}一覧_${todayStr()}.xlsx`, data: blob});
+  }catch(e){
+    if(e && e.code === 'declined') return;
+    console.error('Excel出力に失敗しました', e);
+    showStorageNotice('Excelファイルを作成できませんでした。インターネット接続を確認して、もう一度お試しください。');
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('exportXlsxBtn').addEventListener('click', exportExcel);
+
 
 /* ---------------- Duplicate reagents (使用中・保留のみ、廃棄は含めない) ---------------- */
 function getDuplicateGroups(){
