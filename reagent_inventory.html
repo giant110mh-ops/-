@@ -533,6 +533,7 @@ let currentTab = 'active';
 const UNITS = ['g','kg','mg','mL','L','μL','本','個'];
 const STATUS_LABEL = { active: '使用中', pending: '保留', disposed: '廃棄' };
 const DATE_LABEL = { active: '登録日', pending: '登録日', disposed: '廃棄日' };
+const PERSON_LABEL = { active: '登録者', pending: '登録者', disposed: '廃棄者' };
 
 /* ---------------- Shared storage (claude.ai db capability) ----------------
    Each reagent is one document. Documents are spread over 8 collections
@@ -824,7 +825,7 @@ function renderItemsTable(status){
       <th>メーカー</th>
       <th>保管場所</th>
       <th>容量</th>
-      <th>${dateLabel} / 登録者</th>
+      <th>${dateLabel} / ${PERSON_LABEL[status]}</th>
     </tr>`;
 
   const all = state.items.filter(r => r.status === status);
@@ -870,7 +871,7 @@ function renderItemsTable(status){
       <td data-label="メーカー">${escapeHtml(r.manufacturer || '—')}</td>
       <td data-label="保管場所">${escapeHtml(r.storageLocation || '—')}</td>
       <td data-label="容量" class="qty-cell">${formatQty(r.quantity)} ${escapeHtml(r.unit||'')}</td>
-      <td data-label="${dateLabel}/登録者" class="code-cell">${fmtDate(r.registeredDate)}<br>${escapeHtml(r.registeredBy || '—')}</td>
+      <td data-label="${dateLabel}/${PERSON_LABEL[status]}" class="code-cell">${fmtDate(r.registeredDate)}<br>${escapeHtml(r.registeredBy || '—')}</td>
     </tr>
   `).join('');
 
@@ -944,7 +945,7 @@ function openDetail(id){
           <div class="kv"><div class="k">保管場所</div><div class="v">${escapeHtml(r.storageLocation || '—')}</div></div>
           <div class="kv"><div class="k">容量</div><div class="v mono">${formatQty(r.quantity)} ${escapeHtml(r.unit||'')}</div></div>
           <div class="kv"><div class="k">${dateLabel}</div><div class="v mono">${fmtDate(r.registeredDate)}</div></div>
-          <div class="kv"><div class="k">登録者</div><div class="v">${escapeHtml(r.registeredBy || '—')}</div></div>
+          <div class="kv"><div class="k">${PERSON_LABEL[r.status]}</div><div class="v">${escapeHtml(r.registeredBy || '—')}</div></div>
         </div>
       </div>
     </div>
@@ -1125,8 +1126,8 @@ function openMoveForm(id, targetStatus){
             <input required type="date" name="date" value="${todayStr()}">
           </div>
           <div class="form-field">
-            <label>登録者 *</label>
-            <input required name="registeredBy" value="${escapeHtml(lastRegistrant() || r.registeredBy || '')}">
+            <label>${PERSON_LABEL[targetStatus]} *</label>
+            <input required name="registeredBy" value="${targetStatus === 'disposed' ? '' : escapeHtml(lastRegistrant() || r.registeredBy || '')}" placeholder="${targetStatus === 'disposed' ? '廃棄した人の名前' : ''}">
           </div>
         </div>
         <div class="form-actions">
@@ -1184,7 +1185,7 @@ function deleteReagent(id){
 /* ---------------- CSV export ---------------- */
 function exportCsv(){
   const dateLabel = DATE_LABEL[currentTab];
-  const headers = ['日本語名','英語名','CAS番号','QRコード番号','商品コード','メーカー','保管場所','容量','単位',dateLabel,'登録者'];
+  const headers = ['日本語名','英語名','CAS番号','QRコード番号','商品コード','メーカー','保管場所','容量','単位',dateLabel,PERSON_LABEL[currentTab]];
   const source = state.items.filter(r => r.status === currentTab);
   const rows = source.map(r => [
     r.nameJa, r.nameEn, r.casNumber, r.qrCode, r.productCode,
