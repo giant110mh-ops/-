@@ -552,11 +552,14 @@ const DATE_LABEL = { active: '登録日', pending: '登録日', disposed: '廃�
 const PERSON_LABEL = { active: '登録者', pending: '登録者', disposed: '廃棄者' };
 
 /* ---------------- Shared storage (claude.ai db capability) ----------------
-   Each reagent is one document. Documents are spread over 8 collections
-   (inv0..inv7) by a hash of the id, so every collection stays well under
-   the 1000-document query window. */
-const BUCKETS = 8;
+   Each reagent is one document. Documents are spread over 24 collections
+   (inv0..inv23) by a hash of the id, so every collection stays under the
+   1000-document query window. Records written while the app used 8
+   collections stay where they are: writes go to the collection a document
+   was read from, and only new documents are placed by hash % 24. */
+const BUCKETS = 24;
 const BUCKET_LIMIT = 1000;
+const BUCKET_WARN = 900;
 const NAME_KEY = 'reagent-ledger-last-registrant';
 let db = null;
 let canWrite = false;
@@ -569,9 +572,13 @@ let openDetailId = null;
 function bucketOf(id){
   let h = 0;
   for(let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return 'inv' + (h % BUCKETS);
+  return h % BUCKETS;
 }
-function itemRef(id){ return db.collection(bucketOf(id)).doc(id); }
+function itemRef(id){
+  let b = bucketMaps.findIndex(m => m.has(id));
+  if(b < 0) b = bucketOf(id);
+  return db.collection('inv' + b).doc(id);
+}
 function isLoaded(){ return loadedBuckets.size === BUCKETS; }
 
 function showStorageNotice(message){
@@ -640,7 +647,7 @@ async function connectData(){
       });
       bucketMaps[b] = m;
       loadedBuckets.add(b);
-      if(snap.size >= BUCKET_LIMIT){
+      if(snap.size >= BUCKET_WARN){
         showStorageNotice('登録件数が上限に近づいています。管理者に連絡してください。');
       }
       scheduleRender();
