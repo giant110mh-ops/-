@@ -489,7 +489,6 @@ body.readonly .write-only{display:none !important;}
   <div class="toolbar-right">
     <button class="btn secondary" id="duplicatesBtn">重複試薬一覧</button>
     <button class="btn secondary" id="exportXlsxBtn">Excel出力</button>
-    <button class="btn secondary" id="exportBtn">CSV出力</button>
     <button class="btn amber write-only" id="addReagentBtn">＋ 新規試薬登録</button>
   </div>
 </div>
@@ -1183,36 +1182,6 @@ function deleteReagent(id){
   });
 }
 
-/* ---------------- CSV export ---------------- */
-function exportCsv(){
-  const dateLabel = DATE_LABEL[currentTab];
-  const headers = ['日本語名','英語名','CAS番号','QRコード番号','商品コード','メーカー','保管場所','容量','単位',dateLabel,PERSON_LABEL[currentTab]];
-  const source = state.items.filter(r => r.status === currentTab);
-  const rows = source.map(r => [
-    r.nameJa, r.nameEn, r.casNumber, r.qrCode, r.productCode,
-    r.manufacturer, r.storageLocation, r.quantity, r.unit, r.registeredDate, r.registeredBy
-  ]);
-  const label = STATUS_LABEL[currentTab] + '一覧';
-  downloadCsv(headers, rows, `試薬台帳_${label}_${todayStr()}.csv`);
-}
-function downloadCsv(headers, rows, filename){
-  const csvLines = [headers, ...rows].map(row =>
-    row.map(v => {
-      const s = (v == null ? '' : String(v)).replace(/"/g, '""');
-      return /[",\n]/.test(s) ? `"${s}"` : s;
-    }).join(',')
-  );
-  const csvContent = '\uFEFF' + csvLines.join('\r\n');
-  const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
-  window.claude.use('downloads').then(dl => {
-    if(!dl){ showStorageNotice('この画面ではCSVを保存できません。'); return; }
-    return dl.save({filename, data: blob});
-  }).catch(e => {
-    if(e && e.code === 'declined') return;
-    showStorageNotice('CSVを保存できませんでした。もう一度お試しください。');
-  });
-}
-document.getElementById('exportBtn').addEventListener('click', exportCsv);
 
 /* ---------------- Excel export (same layout as the lab's 薬品管理 workbook) ---------------- */
 const EXCELJS_URL = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
