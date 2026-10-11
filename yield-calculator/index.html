@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap">
 <style>
-/* Layout: 実験ノートの1ページ。上に反応名とテンプレート、仕込み表（横スクロール可）、生成物と収率を2カラム、その下に比の計算と試薬ライブラリ */
+/* Layout: 実験ノート。上に合成ルートのステップ切替、その下に選んだステップの仕込み・生成物・収率、ルート全体のまとめと逆算、比の計算、試薬ライブラリ。スマホでは表をカードにして下端に収率バーを固定 */
 :root {
   --bg: #eef2f4;
   --surface: #ffffff;
@@ -18,6 +18,7 @@
   --line: #d3dce2;
   --accent: #0e7383;
   --accent-soft: #dcf0f2;
+  --porph: #7a3b8f;
   --good: #2c7a49;
   --warn: #a8570f;
   --bad: #b3261e;
@@ -28,13 +29,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e151a; --surface: #162028; --sunken: #111a20; --ink: #e2e9ee; --muted: #93a3af;
-    --line: #2a3a45; --accent: #4fc0cf; --accent-soft: #173a41; --good: #6cc48d; --warn: #e3a25a; --bad: #f08a80;
+    --line: #2a3a45; --accent: #4fc0cf; --accent-soft: #173a41; --porph: #c89ad8; --good: #6cc48d; --warn: #e3a25a; --bad: #f08a80;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e151a; --surface: #162028; --sunken: #111a20; --ink: #e2e9ee; --muted: #93a3af;
-  --line: #2a3a45; --accent: #4fc0cf; --accent-soft: #173a41; --good: #6cc48d; --warn: #e3a25a; --bad: #f08a80;
+  --line: #2a3a45; --accent: #4fc0cf; --accent-soft: #173a41; --porph: #c89ad8; --good: #6cc48d; --warn: #e3a25a; --bad: #f08a80;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -48,15 +49,10 @@ body {
 .wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 20px; }
 
 header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+header > div { min-width: 0; }
 .eyebrow { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin: 0; }
 h1 { margin: 2px 0 0; font-size: 26px; line-height: 1.25; text-wrap: balance; font-weight: 700; }
-.title-input {
-  font: inherit; font-size: 16px; color: var(--ink); background: transparent; border: 0;
-  border-bottom: 1px dashed var(--line); padding: 2px 0; width: min(100%, 440px);
-}
-.title-input:focus { outline: none; border-bottom-color: var(--accent); }
-.head-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.head-actions { min-width: 0; max-width: 100%; }
+.head-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; max-width: 100%; }
 .head-actions select { width: 0; min-width: 0; flex: 1 1 200px; }
 @media (max-width: 600px) { .head-actions { width: 100%; } }
 
@@ -74,11 +70,40 @@ button:hover { border-color: var(--accent); color: var(--accent); }
 button:disabled { opacity: .55; cursor: progress; }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600; }
 button.primary:hover { filter: brightness(1.08); color: var(--surface); }
+button.porph { border-color: var(--porph); color: var(--porph); font-weight: 600; }
+button.porph:hover { background: var(--porph); color: var(--surface); }
 button.icon { padding: 4px 8px; color: var(--muted); border-color: transparent; background: transparent; }
 button.icon:hover { color: var(--bad); border-color: var(--line); }
 button.small { font-size: 11.5px; padding: 3px 8px; white-space: nowrap; flex: none; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* ---- 合成ルート（ステップ切替） ---- */
+.route { display: grid; gap: 10px; padding: 14px 16px; }
+.route-top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 6px 16px; }
+.route-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--muted); margin: 0; }
+.line-input { font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); background: transparent; border: 0; border-bottom: 1px dashed var(--line); border-radius: 0; padding: 2px 0; width: min(100%, 560px); }
+.line-input:focus { outline: none; border-bottom-color: var(--accent); background: transparent; }
+.overall { font-size: 12.5px; color: var(--muted); }
+.overall b { font-family: var(--font-num); font-size: 15px; color: var(--porph); }
+.steps { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.step-tab {
+  flex: none; display: grid; gap: 1px; text-align: left; min-width: 128px; max-width: 220px;
+  padding: 7px 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface);
+}
+.step-tab .n { font-size: 10.5px; color: var(--muted); letter-spacing: .06em; }
+.step-tab .t { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step-tab .y { font-family: var(--font-num); font-size: 12px; color: var(--muted); }
+.step-tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 -3px 0 var(--accent); }
+.step-tab[aria-selected="true"] .y { color: var(--accent); }
+.step-add { border-style: dashed; color: var(--muted); }
+
+.builder { display: grid; gap: 14px; padding: 16px; border-top: 1px solid var(--line); }
+.builder-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 14px; }
+.builder-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.scheme { font-size: 12.5px; color: var(--muted); line-height: 1.9; overflow-wrap: anywhere; background: var(--sunken); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
+.scheme b { color: var(--ink); font-family: var(--font-num); font-weight: 500; }
+
+/* ---- 表 ---- */
 .table-scroll { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; }
 #reagent-table { min-width: 1320px; }
@@ -94,6 +119,7 @@ input, select, textarea {
   border: 1px solid var(--line); border-radius: 4px; padding: 5px 7px; width: 100%; min-width: 0;
 }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+input[readonly] { background: transparent; border-style: dashed; color: var(--muted); }
 input.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
 input.formula { font-family: var(--font-num); }
 input.invalid { border-color: var(--bad); }
@@ -101,7 +127,9 @@ input.coef { font-weight: 600; }
 .with-unit { display: flex; align-items: center; gap: 4px; }
 .with-unit span { font-size: 11px; color: var(--muted); white-space: nowrap; min-width: 2.6em; }
 .name-cell { display: flex; gap: 4px; align-items: center; }
-input[type="radio"] { width: auto; accent-color: var(--accent); margin-top: 9px; }
+input[type="radio"], input[type="checkbox"] { width: auto; accent-color: var(--accent); }
+td.c-ref input { margin-top: 9px; }
+label.field { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
 
 .chip { display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
 .chip.lim { color: var(--accent); }
@@ -110,7 +138,9 @@ input[type="radio"] { width: auto; accent-color: var(--accent); margin-top: 9px;
 .src { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; white-space: nowrap; }
 .src.claude { color: var(--warn); }
 .src.miss { color: var(--bad); }
+.src.link { color: var(--porph); font-weight: 600; }
 .table-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 16px 14px; }
+.foot-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .msg { font-size: 12px; color: var(--warn); margin: 0; }
 
 .lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
@@ -118,7 +148,6 @@ input[type="radio"] { width: auto; accent-color: var(--accent); margin-top: 9px;
 
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; padding: 16px; }
 .form-grid .full { grid-column: 1 / -1; }
-label.field { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
 @media (max-width: 420px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
 
 .result-body { padding: 18px 16px 16px; display: grid; gap: 18px; }
@@ -146,7 +175,20 @@ dl.facts dd { font-family: var(--font-num); font-variant-numeric: tabular-nums; 
 .copy-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .copy-status { font-size: 12px; color: var(--good); }
 textarea.mono { font-family: var(--font-num); font-size: 12px; line-height: 1.55; resize: vertical; }
-textarea#summary { min-height: 210px; }
+textarea#summary, textarea#route-summary { min-height: 200px; }
+
+/* ---- ルートのまとめ ---- */
+.route-body { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+.route-body > div { padding: 16px; min-width: 0; display: grid; gap: 12px; align-content: start; }
+.route-body > div + div { border-left: 1px solid var(--line); }
+@media (max-width: 860px) { .route-body { grid-template-columns: minmax(0, 1fr); } .route-body > div + div { border-left: 0; border-top: 1px solid var(--line); } }
+#route-table td { vertical-align: middle; }
+.plan-in { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.plan-in input { width: 120px; }
+.plan-in select { width: auto; }
+ol.plan { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+ol.plan .amt { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 600; }
+.big-note { font-family: var(--font-num); font-size: 22px; font-weight: 600; color: var(--porph); margin: 0; }
 
 .ratio-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 0; }
 .ratio-grid > div { padding: 16px; min-width: 0; }
@@ -175,9 +217,64 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
 .toast {
   position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
   background: var(--ink); color: var(--bg); border-radius: var(--radius); padding: 8px 10px 8px 14px;
-  display: flex; gap: 12px; align-items: center; font-size: 13px; max-width: calc(100% - 32px); z-index: 10;
+  display: flex; gap: 12px; align-items: center; font-size: 13px; max-width: calc(100% - 32px); z-index: 20;
 }
 .toast button { background: transparent; color: var(--bg); border-color: var(--muted); }
+
+.mobile-bar { display: none; }
+
+/* ---- スマホ: 表をカードにし、下端に収率バーを固定 ---- */
+@media (max-width: 760px) {
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+  h1 { font-size: 22px; }
+  input, select, textarea { font-size: 16px; padding: 7px 8px; }
+  .line-input { font-size: 16px; }
+  button { min-height: 36px; }
+  button.small { min-height: 34px; font-size: 12.5px; padding: 4px 10px; }
+  .lib-scroll { max-height: none; }
+
+  table.cards { min-width: 0 !important; }
+  table.cards thead { display: none; }
+  table.cards, table.cards tbody { display: block; }
+  table.cards tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; padding: 14px; border-bottom: 1px solid var(--line); }
+  table.cards tbody tr:last-child { border-bottom: 0; }
+  table.cards td { display: block; border: 0; padding: 0; min-width: 0; background: transparent; }
+  table.cards td[data-label]::before { content: attr(data-label); display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; letter-spacing: .03em; font-family: var(--font-body); font-weight: 400; }
+  table.cards td.full { grid-column: 1 / -1; }
+  table.cards td.out { text-align: left; padding-top: 0; font-size: 15px; white-space: normal; }
+  table.cards tr.limiting { background: var(--accent-soft); }
+  table.cards tr.limiting td { background: transparent; }
+
+  #reagent-table td.c-name { order: 1; }
+  #reagent-table td.c-role { order: 2; }
+  #reagent-table td.c-mode { order: 3; }
+  #reagent-table td.c-formula { order: 4; }
+  #reagent-table td.c-mw { order: 5; }
+  #reagent-table td.c-amount { order: 6; }
+  #reagent-table td.c-aux { order: 7; }
+  #reagent-table td.c-purity { order: 8; }
+  #reagent-table td.c-coef { order: 9; }
+  #reagent-table td.c-mmol { order: 10; }
+  #reagent-table td.c-equiv { order: 11; }
+  #reagent-table td.c-prod { order: 12; }
+  #reagent-table td.c-mass { order: 13; }
+  #reagent-table td.c-ref { order: 14; display: flex; align-items: center; gap: 8px; }
+  #reagent-table td.c-ref::before { margin: 0; order: 2; font-size: 12.5px; }
+  #reagent-table td.c-ref input { margin: 0; width: 20px; height: 20px; }
+  #reagent-table td.c-act { order: 15; text-align: right; }
+
+  .mobile-bar {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 15;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--surface); border-top: 1px solid var(--line);
+    align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .mobile-bar > div { min-width: 0; }
+  .mb-step { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mb-main { font-family: var(--font-num); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mb-yield { font-family: var(--font-num); font-size: 28px; font-weight: 600; line-height: 1; color: var(--accent); white-space: nowrap; }
+  .toast { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+}
 </style>
 </head>
 <body>
@@ -187,29 +284,86 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     <div>
       <p class="eyebrow">Organic Synthesis · Yield</p>
       <h1>収率計算ノート</h1>
-      <input class="title-input" id="rxn-title" type="text" placeholder="反応名・実験番号（例: MH-042 鈴木–宮浦カップリング）" aria-label="反応名">
     </div>
     <div class="head-actions">
-      <label class="sub" for="tpl">反応テンプレート</label>
-      <select id="tpl" aria-label="反応テンプレート">
-        <option value="">選んで読み込む…</option>
+      <button type="button" class="porph" id="btn-builder" aria-expanded="false" aria-controls="builder">ポルフィリン(2.1.2.1) ルートを作成</button>
+      <select id="tpl" aria-label="このステップに反応テンプレートを読み込む">
+        <option value="">このステップに 1 反応テンプレート…</option>
         <option value="suzuki">鈴木–宮浦カップリング（1 : 1 → 1）</option>
-        <option value="dipyrrolylbenzene">o-ジピロリルベンゼン前駆体（ジハロベンゼン 1 + ピロール 2 → 1）</option>
-        <option value="porph2121">ジベンゾポルフィリン(2.1.2.1)（ジピロリルベンゼン 2 + アルデヒド 2 → 1）</option>
-        <option value="lindsey">Lindsey 法 A4 ポルフィリン（ピロール 4 + アルデヒド 4 → 1）</option>
+        <option value="dipyrrolylbenzene">Boc 体の合成（ジハロベンゼン 1 + ピロール 2 → 1）</option>
+        <option value="porph2121">ジベンゾポルフィリン(2.1.2.1)（2 + 2 → 1）</option>
+        <option value="lindsey">Lindsey 法 A4 ポルフィリン（4 + 4 → 1）</option>
         <option value="dpm">ジピロメタン（アルデヒド 1 + 過剰ピロール 2 → 1）</option>
       </select>
-      <button type="button" id="btn-clear">すべてクリア</button>
     </div>
   </header>
 
+  <!-- 合成ルート -->
+  <section class="panel" aria-labelledby="h-route">
+    <div class="route">
+      <div class="route-top">
+        <div style="min-width:0; flex:1 1 280px">
+          <h2 id="h-route" class="route-label">合成ルート</h2>
+          <input class="line-input" id="route-name" type="text" placeholder="ルート名・実験番号（例: MH-042 Ni 錯体）" aria-label="ルート名">
+        </div>
+        <div class="overall" id="overall"></div>
+      </div>
+      <div class="steps" id="steps" role="tablist" aria-label="ステップ"></div>
+    </div>
+
+    <div class="builder" id="builder" hidden>
+      <div>
+        <h3>ポルフィリン(2.1.2.1) の合成ルートを作成</h3>
+        <p class="hint">選んだ原料から各ステップの生成物の分子式を自動で組み立てます。今のルートは置き換わります（直後なら元に戻せます）。</p>
+      </div>
+      <div class="builder-grid">
+        <label class="field">ジハロベンゼン
+          <select id="b-halide">
+            <option value="Br">1,2-ジブロモベンゼン</option>
+            <option value="I">1,2-ジヨードベンゼン</option>
+            <option value="BrI">1-ブロモ-2-ヨードベンゼン</option>
+          </select>
+        </label>
+        <label class="field">スケール（ジハロベンゼン）
+          <span class="with-unit"><input id="b-scale" class="num" type="number" inputmode="decimal" step="any" min="0" value="1.0"><span>mmol</span></span>
+        </label>
+        <label class="field">アルデヒド（meso 置換基）
+          <select id="b-ald"></select>
+        </label>
+        <label class="field" id="b-ald-custom-wrap" hidden>アルデヒドの名称・分子式
+          <span class="name-cell"><input id="b-ald-name" type="text" placeholder="名称"><input id="b-ald-formula" class="formula" type="text" placeholder="C8H8O"></span>
+        </label>
+        <label class="field">金属化
+          <select id="b-metal">
+            <option value="">しない（フリーベースまで）</option>
+            <option value="Ni">Ni(II) — Ni(OAc)2·4H2O</option>
+            <option value="Cu">Cu(II) — Cu(OAc)2·H2O</option>
+            <option value="Pd">Pd(II) — Pd(OAc)2</option>
+            <option value="Pt">Pt(II) — PtCl2</option>
+            <option value="Zn">Zn(II) — Zn(OAc)2·2H2O</option>
+            <option value="Sn">Sn(IV) — SnCl2·2H2O（軸配位子 Cl2 と仮定）</option>
+          </select>
+        </label>
+        <label class="field" style="align-self:end"><span style="display:flex; gap:6px; align-items:center"><input type="checkbox" id="b-example"> 収量欄に例の値を入れる</span></label>
+      </div>
+      <div class="scheme" id="b-scheme"></div>
+      <div class="builder-actions">
+        <button type="button" class="primary" id="b-create">このルートを作成</button>
+        <button type="button" id="b-cancel">閉じる</button>
+      </div>
+    </div>
+  </section>
+
   <section class="panel" aria-labelledby="h-reagents">
     <div class="panel-head">
-      <h2 id="h-reagents">仕込み（原料・試薬）</h2>
+      <h2 id="h-reagents"><span id="step-badge"></span>仕込み（原料・試薬）</h2>
       <p class="hint">名称を入れると登録試薬から自動入力。見つからなければ「検索」でオンライン検索します。</p>
     </div>
+    <div style="padding:10px 16px 0">
+      <input class="line-input" id="rxn-title" type="text" placeholder="ステップ名（例: Boc 体の合成）" aria-label="ステップ名" style="font-size:14px">
+    </div>
     <div class="table-scroll">
-      <table id="reagent-table">
+      <table id="reagent-table" class="cards">
         <thead>
           <tr>
             <th title="この物質を 1.00 equiv とします">基準</th>
@@ -221,10 +375,10 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
             <th style="width:136px">量</th>
             <th style="width:120px">密度 / 濃度</th>
             <th style="width:72px">純度 %</th>
-            <th style="width:62px" title="反応式で生成物 1 分子をつくるのに必要な分子数">係数</th>
+            <th style="width:62px" title="反応式で生成物をつくるのに必要な分子数">係数</th>
             <th class="num">mmol</th>
             <th class="num">equiv</th>
-            <th class="num" title="この試薬だけで考えたときに最大何 mmol の生成物ができるか（mmol ÷ 係数 × 生成物の係数）">生成物換算</th>
+            <th class="num" title="この試薬だけで考えたときに最大何 mmol の生成物ができるか">生成物換算</th>
             <th class="num">質量 / 体積</th>
             <th></th>
           </tr>
@@ -233,7 +387,10 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
       </table>
     </div>
     <div class="table-foot">
-      <button type="button" class="primary" id="btn-add">＋ 試薬を追加</button>
+      <div class="foot-buttons">
+        <button type="button" class="primary" id="btn-add">＋ 試薬を追加</button>
+        <button type="button" class="porph" id="btn-link" hidden>＋ 前ステップの生成物を原料に</button>
+      </div>
       <p class="msg" id="reagent-msg" hidden></p>
     </div>
   </section>
@@ -247,28 +404,28 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
       <div class="form-grid">
         <label class="field full">名称
           <span class="name-cell">
-            <input id="p-name" type="text" list="lib-names" placeholder="例: 4-メトキシビフェニル" autocomplete="off">
+            <input id="p-name" type="text" list="lib-names" placeholder="例: o-ジピロリルベンゼン" autocomplete="off">
             <button type="button" class="small" id="p-lookup">検索</button>
           </span>
           <span class="src" id="p-src"></span>
         </label>
         <label class="field">分子式
-          <input id="p-formula" class="formula" type="text" placeholder="C13H12O">
+          <input id="p-formula" class="formula" type="text" placeholder="C14H12N2">
         </label>
         <label class="field">MW (g/mol)
-          <input id="p-mw" class="num" type="number" step="any" min="0" placeholder="自動">
+          <input id="p-mw" class="num" type="number" inputmode="decimal" step="any" min="0" placeholder="自動">
         </label>
         <label class="field">得られた質量
-          <span class="with-unit"><input id="p-mass" class="num" type="number" step="any" min="0" placeholder="0"><span>mg</span></span>
+          <span class="with-unit"><input id="p-mass" class="num" type="number" inputmode="decimal" step="any" min="0" placeholder="0"><span>mg</span></span>
         </label>
         <label class="field">純度
-          <span class="with-unit"><input id="p-purity" class="num" type="number" step="any" min="0" max="100" placeholder="100"><span>%</span></span>
+          <span class="with-unit"><input id="p-purity" class="num" type="number" inputmode="decimal" step="any" min="0" max="100" placeholder="100"><span>%</span></span>
         </label>
         <label class="field">化学量論係数
-          <input id="p-coef" class="num coef" type="number" step="any" min="0" placeholder="1">
+          <input id="p-coef" class="num coef" type="number" inputmode="decimal" step="any" min="0" placeholder="1">
         </label>
         <label class="field">備考
-          <input id="p-note" type="text" placeholder="例: 白色固体, Rf 0.45 (Hex/EtOAc 10:1)">
+          <input id="p-note" type="text" placeholder="例: 紫色固体, Rf 0.45 (CH2Cl2)">
         </label>
       </div>
     </section>
@@ -298,7 +455,7 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
         </dl>
         <div style="display:grid; gap:8px">
           <div class="copy-row">
-            <button type="button" id="btn-copy">ノート用テキストをコピー</button>
+            <button type="button" id="btn-copy">このステップをコピー</button>
             <span class="copy-status" id="copy-status" aria-live="polite"></span>
           </div>
           <textarea id="summary" class="mono" readonly aria-label="実験ノート用のまとめ"></textarea>
@@ -306,6 +463,39 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
       </div>
     </section>
   </div>
+
+  <section class="panel" aria-labelledby="h-routesum">
+    <div class="panel-head">
+      <h2 id="h-routesum">ルートのまとめと逆算</h2>
+      <p class="hint">各ステップの収率と通算収率。目標量から最初に必要な原料を逆算します。</p>
+    </div>
+    <div class="route-body">
+      <div>
+        <div class="table-scroll">
+          <table id="route-table" class="cards" style="min-width:640px">
+            <thead><tr><th>#</th><th style="width:30%">ステップ</th><th>生成物</th><th class="num">収量</th><th class="num">収率</th><th style="width:110px" title="逆算に使う収率。空欄なら実際の収率を使います">想定収率 %</th><th></th></tr></thead>
+            <tbody id="route-rows"></tbody>
+          </table>
+        </div>
+        <div class="copy-row">
+          <button type="button" id="btn-route-copy">ルート全体をコピー</button>
+          <span class="copy-status" id="route-copy-status" aria-live="polite"></span>
+        </div>
+        <textarea id="route-summary" class="mono" readonly aria-label="ルート全体のまとめ"></textarea>
+      </div>
+      <div>
+        <h3>目標量から逆算</h3>
+        <div class="plan-in">
+          <span class="sub" style="display:inline">最終生成物を</span>
+          <input id="plan-target" class="num" type="number" inputmode="decimal" step="any" min="0" placeholder="50">
+          <select id="plan-unit" aria-label="単位"><option value="mg">mg</option><option value="mmol">mmol</option></select>
+          <span class="sub" style="display:inline">得るには</span>
+        </div>
+        <div id="plan-out"></div>
+        <p class="hint">想定収率が空欄のステップは実際の収率を使います。各ステップで前の生成物を全量使う前提です。</p>
+      </div>
+    </div>
+  </section>
 
   <section class="panel" aria-labelledby="h-ratio">
     <div class="panel-head">
@@ -317,13 +507,13 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
         <h3>比例式 a : b = c : x</h3>
         <p class="hint" style="margin-bottom:10px">4 つのうち 1 つを空欄にすると、その値を求めます。</p>
         <div class="prop">
-          <input id="pa" class="num" type="number" step="any" placeholder="a" aria-label="a">
+          <input id="pa" class="num" type="number" inputmode="decimal" step="any" placeholder="a" aria-label="a">
           <span>:</span>
-          <input id="pb" class="num" type="number" step="any" placeholder="b" aria-label="b">
+          <input id="pb" class="num" type="number" inputmode="decimal" step="any" placeholder="b" aria-label="b">
           <span>=</span>
-          <input id="pc" class="num" type="number" step="any" placeholder="c" aria-label="c">
+          <input id="pc" class="num" type="number" inputmode="decimal" step="any" placeholder="c" aria-label="c">
           <span>:</span>
-          <input id="pd" class="num" type="number" step="any" placeholder="x" aria-label="d">
+          <input id="pd" class="num" type="number" inputmode="decimal" step="any" placeholder="x" aria-label="d">
         </div>
         <div class="answer" id="prop-answer" aria-live="polite"></div>
       </div>
@@ -331,7 +521,7 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
         <h3>複数の値の比</h3>
         <p class="hint" style="margin-bottom:10px">MW を入れた行は 量 を mg とみなして mmol に換算してから比をとります（モル比）。</p>
         <div class="table-scroll">
-          <table class="ratio-table" style="min-width:480px">
+          <table class="ratio-table cards" style="min-width:480px">
             <thead><tr><th>名称</th><th>量</th><th>MW（任意）</th><th class="num">換算値</th><th class="num">比</th><th></th></tr></thead>
             <tbody id="ratio-rows"></tbody>
           </table>
@@ -355,15 +545,15 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
   <section class="panel" aria-labelledby="h-lib">
     <div class="panel-head">
       <h2 id="h-lib">試薬ライブラリ</h2>
-      <p class="hint">ここに登録した試薬は名称入力の候補に出て、選ぶと分子式・密度・濃度が自動で入ります。</p>
+      <p class="hint">登録した試薬は名称入力の候補に出て、選ぶと分子式・密度・濃度が自動で入ります。</p>
     </div>
     <div class="lib-tools">
       <input type="search" id="lib-filter" placeholder="絞り込み（名称・分子式）" aria-label="ライブラリを絞り込み">
       <button type="button" class="primary small" id="lib-add">＋ 試薬を登録</button>
-      <label class="sub" style="display:flex; gap:6px; align-items:center"><input type="checkbox" id="lib-show-builtin" style="width:auto"> 組込み試薬も表示</label>
+      <label class="sub" style="display:flex; gap:6px; align-items:center"><input type="checkbox" id="lib-show-builtin"> 組込み試薬も表示</label>
     </div>
     <div class="table-scroll lib-scroll">
-      <table id="lib-table">
+      <table id="lib-table" class="cards">
         <thead><tr><th style="width:190px">名称</th><th style="width:200px">別名（, 区切り）</th><th style="width:140px">分子式</th><th style="width:96px">MW</th><th style="width:96px">密度 g/mL</th><th style="width:96px">濃度 M</th><th style="width:76px">純度 %</th><th>メモ</th><th></th></tr></thead>
         <tbody id="lib-rows"></tbody>
       </table>
@@ -384,32 +574,41 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
   </section>
 
   <details class="help">
-    <summary>計算方法・係数の考え方・分子式の書き方</summary>
+    <summary>使い方・計算方法・係数の考え方</summary>
+    <h3>ポルフィリン(2.1.2.1) の合成ルート</h3>
+    <ul>
+      <li>「ポルフィリン(2.1.2.1) ルートを作成」で、① Boc 体（鈴木カップリング）→ ② 脱 Boc → ③ [2+2] 縮合・DDQ 酸化 → ④ 金属化 のステップを一度に作ります</li>
+      <li>アルデヒドと金属を選ぶと生成物の分子式を自動で組み立てます。環化体 = 2 × o-ジピロリルベンゼン + 2 × アルデヒド − 2 H2O − 4 H、金属錯体 = 環化体 − 2 H + M</li>
+      <li>2 番目以降のステップでは「前ステップの生成物」が原料行としてつながります。量を空欄にしておくと前ステップの収量を全量使います（一部だけ使うときは量を入力）</li>
+      <li>通算収率は各ステップの収率の積です。「目標量から逆算」に最終生成物の目標量を入れると、各ステップで必要な原料量を逆算します</li>
+      <li>反応条件（試薬の当量・溶媒量）と例の収量は計算の流れを示すための入力例です。実際の条件に合わせて書き換えてください</li>
+    </ul>
     <h3>係数（化学量論）と収率の基準</h3>
     <ul>
-      <li>各試薬の「係数」は、生成物 1 分子（生成物の係数ぶん）をつくるのに必要な分子数です。生成物換算 = mmol ÷ 係数 × 生成物の係数</li>
+      <li>各試薬の「係数」は、生成物（生成物の係数ぶん）をつくるのに必要な分子数です。生成物換算 = mmol ÷ 係数 × 生成物の係数</li>
       <li>律速試薬は、役割が「基質」「反応剤」の行のうち生成物換算が最小のものです。触媒・塩基・添加剤・溶媒は除外します</li>
-      <li>理論収量 = 律速試薬の生成物換算。収率 = 実収量(mmol) ÷ 理論収量(mmol) × 100</li>
-      <li>例: ジベンゾポルフィリン(2.1.2.1) は o-ジピロリルベンゼン 2 分子とアルデヒド 2 分子の [2+2] 縮合で 1 分子の大環状化合物になります。ジピロリルベンゼン 1.00 mmol から理論上 0.50 mmol しかできないので、係数を 2 にします</li>
-      <li>例: o-ジピロリルベンゼン（前駆体）はベンゼン 1 分子にピロール環 2 つが結合します。ピロール源（ボロン酸など）の係数は 2、ジハロベンゼンは 1。ピロール源が 1.8 equiv なら律速はピロール源になり、理論収量は 0.90 mmol です</li>
-      <li>ジピロメタン合成のようにピロールを大過剰（溶媒量）使う場合も、係数 2 を入れておけば律速はアルデヒドと自動判定されます</li>
+      <li>[2+2] 縮合では o-ジピロリルベンゼン 1.00 mmol から理論上 0.50 mmol しかできないので係数は 2。Boc 体の合成ではピロールボロン酸の係数が 2 です</li>
     </ul>
     <h3>入力方法</h3>
     <ul>
-      <li>質量: mmol = 質量(mg) × 純度 ÷ MW</li>
-      <li>体積（液体）: 質量(mg) = 体積(µL) × 密度(g/mL)</li>
-      <li>溶液: mmol = 体積(mL) × 濃度(M)。n-BuLi などに使います</li>
+      <li>質量: mmol = 質量(mg) × 純度 ÷ MW ／ 体積: 質量(mg) = 体積(µL) × 密度(g/mL) ／ 溶液: mmol = 体積(mL) × 濃度(M)</li>
       <li>当量指定: 基準物質の mmol × equiv から必要量を逆算します。密度を入れると µL も表示します</li>
     </ul>
     <h3>分子式と自動入力</h3>
     <ul>
-      <li><code>C7H7BrO</code>、括弧 <code>Pd(PPh3)4</code>、水和物 <code>CuSO4·5H2O</code>（<code>.</code> や <code>*</code> も可）に対応します</li>
-      <li>略号 <code>Me Et Bu tBu iPr Ph Bn Bz Ac Ts Ms Tf Boc Cbz Piv Cy TMS TBS</code> も使えます（<code>Ac</code> はアセチル）</li>
-      <li>名称の自動入力は ① 自分で登録した試薬 ② 組込み試薬 ③ PubChem（英語名・CAS 番号）④ Claude による推定 の順に探します。③④ は「検索」ボタンを押したときだけ使います</li>
-      <li>Claude の推定値には「要確認」と表示されます。試薬ラベルや SDS で確認してから使ってください</li>
-      <li>MW 欄に値を入れると分子式からの計算値より優先されます。入力内容と登録試薬はこのブラウザにだけ保存されます</li>
+      <li><code>C7H7BrO</code>、括弧 <code>Pd(PPh3)4</code>、水和物 <code>CuSO4·5H2O</code>、略号 <code>Me Et Bu tBu iPr Ph Bn Bz Ac Ts Ms Tf Boc Cbz Piv Cy Mes TMS TBS TIPS</code> が使えます</li>
+      <li>名称の自動入力は ① 登録試薬 ② 組込み試薬 ③ PubChem ④ Claude による推定 の順に探します。③④ は「検索」ボタンを押したときだけ使い、④ には「要確認」と表示されます</li>
+      <li>入力内容と登録試薬はこのブラウザにだけ保存されます。PC とスマホで共有したいときはライブラリの JSON 書き出しを使ってください</li>
     </ul>
   </details>
+</div>
+
+<div class="mobile-bar" id="mobile-bar" aria-live="polite">
+  <div>
+    <div class="mb-step" id="mb-step"></div>
+    <div class="mb-main" id="mb-main"></div>
+  </div>
+  <div class="mb-yield" id="mb-yield">—%</div>
 </div>
 
 <datalist id="lib-names"></datalist>
@@ -436,7 +635,7 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
   const ABBR = {
     Me:"CH3", Et:"C2H5", Bu:"C4H9", nBu:"C4H9", tBu:"C4H9", iPr:"C3H7", nPr:"C3H7", Ph:"C6H5", Bn:"C7H7",
     Bz:"C7H5O", Ac:"C2H3O", Ts:"C7H7SO2", Ms:"CH3SO2", Tf:"CF3SO2", Boc:"C5H9O2", Cbz:"C8H7O2",
-    Piv:"C5H9O", Cy:"C6H11", TMS:"C3H9Si", TBS:"C6H15Si"
+    Piv:"C5H9O", Cy:"C6H11", Mes:"C9H11", TMS:"C3H9Si", TBS:"C6H15Si", TIPS:"C9H21Si"
   };
   const ABBR_KEYS = Object.keys(ABBR).sort((a, b) => b.length - a.length);
 
@@ -465,7 +664,7 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
         } else {
           const m = /^[A-Z][a-z]?/.exec(s.slice(pos.i));
           if (!m) throw new Error("読めない文字: " + ch);
-          let sym = m[0];
+          const sym = m[0];
           if (!(sym in AW)) throw new Error("不明な元素: " + sym);
           pos.i += sym.length;
           part = { [sym]: 1 };
@@ -502,6 +701,16 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     return mw;
   }
 
+  // 分子式の足し引き。[[分子式, 係数], ...] を Hill 表記で返す
+  function combineFormula(parts) {
+    const total = {};
+    for (const [fm, k] of parts) addCounts(total, parseFormulaCounts(fm), k);
+    const els = Object.keys(total).filter(e => Math.abs(total[e]) > 1e-9);
+    if (els.some(e => total[e] < 0)) throw new Error("原子数が負になります");
+    const order = total.C ? ["C", "H"].filter(e => els.includes(e)).concat(els.filter(e => e !== "C" && e !== "H").sort()) : els.sort();
+    return order.map(e => e + (total[e] === 1 ? "" : +total[e].toFixed(3))).join("");
+  }
+
   // ---- 組込み試薬（d: 密度 g/mL、c: 市販溶液の濃度 M） ----
   const BUILTIN = [
     // 溶媒
@@ -524,19 +733,35 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     { name: "ピロール", aliases: "pyrrole, 1H-pyrrole", formula: "C4H5N", d: 0.967 },
     { name: "ベンズアルデヒド", aliases: "benzaldehyde, PhCHO", formula: "C7H6O", d: 1.044 },
     { name: "メシトアルデヒド", aliases: "mesitaldehyde, 2,4,6-trimethylbenzaldehyde, MesCHO", formula: "C10H12O", d: 1.005 },
+    { name: "p-トルアルデヒド", aliases: "4-methylbenzaldehyde, p-tolualdehyde, 4-メチルベンズアルデヒド", formula: "C8H8O", d: 1.019 },
+    { name: "p-アニスアルデヒド", aliases: "4-methoxybenzaldehyde, anisaldehyde, 4-メトキシベンズアルデヒド", formula: "C8H8O2", d: 1.119 },
+    { name: "4-(トリフルオロメチル)ベンズアルデヒド", aliases: "4-(trifluoromethyl)benzaldehyde", formula: "C8H5F3O", d: 1.275 },
+    { name: "ペンタフルオロベンズアルデヒド", aliases: "pentafluorobenzaldehyde, C6F5CHO", formula: "C7HF5O", d: 1.588 },
+    { name: "4-ブロモベンズアルデヒド", aliases: "4-bromobenzaldehyde", formula: "C7H5BrO" },
+    { name: "4-ニトロベンズアルデヒド", aliases: "4-nitrobenzaldehyde", formula: "C7H5NO3" },
+    { name: "3,5-ジ-tert-ブチルベンズアルデヒド", aliases: "3,5-di-tert-butylbenzaldehyde", formula: "C15H22O" },
+    { name: "2-チオフェンカルボキシアルデヒド", aliases: "thiophene-2-carbaldehyde, 2-thiophenecarboxaldehyde", formula: "C5H4OS", d: 1.2 },
+    { name: "3-(トリイソプロピルシリル)プロピナール", aliases: "TIPS-propynal, 3-(triisopropylsilyl)propiolaldehyde, TIPS-プロピナール", formula: "C12H22OSi" },
     { name: "パラホルムアルデヒド", aliases: "paraformaldehyde, (CH2O)n", formula: "CH2O" },
     { name: "o-ジピロリルベンゼン", aliases: "1,2-di(pyrrol-2-yl)benzene, 1,2-ジ(2-ピロリル)ベンゼン, ジピロルベンゼン, o-dipyrrolylbenzene", formula: "C14H12N2" },
-    { name: "1,2-ビス(N-Boc-ピロール-2-イル)ベンゼン", aliases: "1,2-bis(N-Boc-pyrrol-2-yl)benzene, Boc保護ジピロリルベンゼン", formula: "C24H28N2O4" },
+    { name: "1,2-ビス(N-Boc-ピロール-2-イル)ベンゼン", aliases: "1,2-bis(N-Boc-pyrrol-2-yl)benzene, Boc体, Boc保護ジピロリルベンゼン", formula: "C24H28N2O4" },
     { name: "N-Boc-ピロール-2-ボロン酸", aliases: "N-Boc-2-pyrroleboronic acid, 1-Boc-pyrrole-2-boronic acid", formula: "C9H14BNO4" },
     { name: "1,2-ジブロモベンゼン", aliases: "1,2-dibromobenzene, o-dibromobenzene", formula: "C6H4Br2", d: 1.956 },
     { name: "1,2-ジヨードベンゼン", aliases: "1,2-diiodobenzene, o-diiodobenzene", formula: "C6H4I2", d: 2.54 },
+    { name: "1-ブロモ-2-ヨードベンゼン", aliases: "1-bromo-2-iodobenzene, 2-bromoiodobenzene", formula: "C6H4BrI", d: 2.203 },
     { name: "5-フェニルジピロメタン", aliases: "5-phenyldipyrromethane, phenyldipyrromethane", formula: "C15H14N2" },
     { name: "テトラフェニルポルフィリン", aliases: "TPP, H2TPP, tetraphenylporphyrin, 5,10,15,20-tetraphenylporphyrin", formula: "C44H30N4" },
     { name: "DDQ", aliases: "2,3-ジクロロ-5,6-ジシアノ-p-ベンゾキノン, 2,3-dichloro-5,6-dicyano-1,4-benzoquinone", formula: "C8Cl2N2O2" },
     { name: "p-クロラニル", aliases: "p-chloranil, chloranil, テトラクロロ-1,4-ベンゾキノン", formula: "C6Cl4O2" },
     { name: "三フッ化ホウ素ジエチルエーテル錯体", aliases: "BF3·OEt2, BF3OEt2, BF3 etherate, boron trifluoride diethyl etherate", formula: "C4H10BF3O", d: 1.15 },
     { name: "トリフルオロ酢酸", aliases: "TFA, trifluoroacetic acid", formula: "C2HF3O2", d: 1.489 },
-    { name: "酢酸亜鉛二水和物", aliases: "Zn(OAc)2·2H2O, zinc acetate dihydrate", formula: "Zn(C2H3O2)2·2H2O" },
+    // 金属源
+    { name: "酢酸ニッケル(II)四水和物", aliases: "Ni(OAc)2·4H2O, nickel acetate tetrahydrate", formula: "C4H6NiO4·4H2O" },
+    { name: "酢酸銅(II)一水和物", aliases: "Cu(OAc)2·H2O, copper acetate monohydrate", formula: "C4H6CuO4·H2O" },
+    { name: "酢酸亜鉛二水和物", aliases: "Zn(OAc)2·2H2O, zinc acetate dihydrate", formula: "C4H6O4Zn·2H2O" },
+    { name: "塩化白金(II)", aliases: "PtCl2, platinum(II) chloride", formula: "PtCl2" },
+    { name: "塩化スズ(II)二水和物", aliases: "SnCl2·2H2O, tin(II) chloride dihydrate", formula: "SnCl2·2H2O" },
+    { name: "酢酸ナトリウム", aliases: "NaOAc, sodium acetate", formula: "C2H3NaO2" },
     // 酸・塩基
     { name: "トリエチルアミン", aliases: "Et3N, TEA, triethylamine", formula: "C6H15N", d: 0.726 },
     { name: "N,N-ジイソプロピルエチルアミン", aliases: "DIPEA, DIEA, Hünig's base, iPr2NEt", formula: "C8H19N", d: 0.742 },
@@ -549,6 +774,7 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     { name: "水酸化ナトリウム", aliases: "NaOH, sodium hydroxide", formula: "NaOH" },
     { name: "水酸化カリウム", aliases: "KOH, potassium hydroxide", formula: "KOH" },
     { name: "リン酸カリウム", aliases: "K3PO4, potassium phosphate", formula: "K3PO4" },
+    { name: "ナトリウムメトキシド", aliases: "NaOMe, sodium methoxide", formula: "CH3NaO" },
     { name: "水素化ナトリウム（60% 油分散）", aliases: "NaH, sodium hydride", formula: "NaH", purity: 60 },
     { name: "n-ブチルリチウム（1.6 M ヘキサン溶液）", aliases: "n-BuLi, nBuLi, BuLi, butyllithium", formula: "C4H9Li", c: 1.6 },
     { name: "酢酸", aliases: "AcOH, acetic acid", formula: "C2H4O2", d: 1.049 },
@@ -556,7 +782,7 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     { name: "p-トルエンスルホン酸一水和物", aliases: "TsOH·H2O, p-TsOH, PTSA", formula: "C7H8O3S·H2O" },
     // 触媒・試薬
     { name: "テトラキス(トリフェニルホスフィン)パラジウム(0)", aliases: "Pd(PPh3)4, tetrakis", formula: "Pd(PPh3)4" },
-    { name: "酢酸パラジウム(II)", aliases: "Pd(OAc)2, palladium acetate", formula: "Pd(C2H3O2)2" },
+    { name: "酢酸パラジウム(II)", aliases: "Pd(OAc)2, palladium acetate", formula: "C4H6O4Pd" },
     { name: "ビス(トリフェニルホスフィン)パラジウム(II)ジクロリド", aliases: "PdCl2(PPh3)2", formula: "PdCl2(PPh3)2" },
     { name: "Pd(dppf)Cl2·CH2Cl2", aliases: "PdCl2(dppf)·CH2Cl2", formula: "C34H28Cl2FeP2Pd·CH2Cl2" },
     { name: "トリフェニルホスフィン", aliases: "PPh3, triphenylphosphine", formula: "C18H15P" },
@@ -568,7 +794,6 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     { name: "塩化メタンスルホニル", aliases: "MsCl, mesyl chloride", formula: "CH3ClO2S", d: 1.48 },
     { name: "水素化ホウ素ナトリウム", aliases: "NaBH4, sodium borohydride", formula: "NaBH4" },
     { name: "水素化アルミニウムリチウム", aliases: "LiAlH4, LAH", formula: "LiAlH4" },
-    { name: "ナトリウムメトキシド", aliases: "NaOMe, sodium methoxide", formula: "CH3NaO" },
     { name: "フェニルボロン酸", aliases: "phenylboronic acid, PhB(OH)2", formula: "PhB(OH)2" },
     { name: "4-ブロモアニソール", aliases: "4-bromoanisole, p-bromoanisole", formula: "C7H7BrO", d: 1.494 },
     { name: "4-メトキシビフェニル", aliases: "4-methoxybiphenyl", formula: "C13H12O" },
@@ -580,7 +805,8 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
   const norm = s => String(s || "").normalize("NFKC").toLowerCase().replace(/[\s\-‐–_・,()（）[\]'’]/g, "");
 
   // ---- 永続化 ----
-  const STORE_KEY = "yield-calc-v1";
+  const APP_KEY = "yield-calc-app-v2";
+  const OLD_KEY = "yield-calc-v1";
   const LIB_KEY = "yield-calc-lib-v1";
   const RATIO_KEY = "yield-calc-ratio-v1";
   const readJSON = k => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch (e) { return null; } };
@@ -597,6 +823,8 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     const hit = list => list.find(e => norm(e.name) === n || String(e.aliases || "").split(/[,、]/).some(a => norm(a) === n));
     return hit(userLib) || hit(BUILTIN) || null;
   }
+  const libFormula = name => (findInLib(name) || {}).formula || "";
+  const libDensity = name => { const e = findInLib(name); return e && e.d ? String(e.d) : ""; };
 
   // ---- 状態 ----
   const ROLES = [
@@ -611,90 +839,178 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     equiv:    { label: "当量指定", unit: "equiv", aux: "g/mL" }
   };
   let nextId = 1;
+  let stepSeq = 1;
 
   function newRow(over) {
-    return Object.assign({ id: nextId++, name: "", role: "reagent", formula: "", mw: "", mode: "mass", amount: "", aux: "", purity: "", coef: "", src: "" }, over || {});
+    return Object.assign({ id: nextId++, name: "", role: "reagent", formula: "", mw: "", mode: "mass", amount: "", aux: "", purity: "", coef: "", src: "", link: false }, over || {});
+  }
+  // 名称から分子式・密度を組込み試薬で補う
+  function libRow(name, over) {
+    const o = Object.assign({ name, formula: libFormula(name) }, over || {});
+    if (o.aux === undefined && (o.mode === "volume" || o.mode === "equiv")) o.aux = libDensity(name);
+    return newRow(o);
   }
   const emptyProduct = () => ({ name: "", formula: "", mw: "", mass: "", purity: "", coef: "", note: "", src: "" });
+  const sheetOf = (title, rows, product, example) => ({ title, rows, refId: rows[0] ? rows[0].id : null, product, example: !!example });
+  const stepOf = sheet => ({ id: stepSeq++, expYield: "", sheet });
 
-  // 反応テンプレート。量はすべて入力例（架空の値）
+  // ---- ポルフィリン(2.1.2.1) ルート ----
+  const HALIDES = { Br: "1,2-ジブロモベンゼン", I: "1,2-ジヨードベンゼン", BrI: "1-ブロモ-2-ヨードベンゼン" };
+  const ALDEHYDES = [
+    { name: "ベンズアルデヒド", ar: "フェニル" },
+    { name: "メシトアルデヒド", ar: "メシチル" },
+    { name: "p-トルアルデヒド", ar: "p-トリル" },
+    { name: "p-アニスアルデヒド", ar: "4-メトキシフェニル" },
+    { name: "4-(トリフルオロメチル)ベンズアルデヒド", ar: "4-(トリフルオロメチル)フェニル" },
+    { name: "ペンタフルオロベンズアルデヒド", ar: "ペンタフルオロフェニル" },
+    { name: "4-ブロモベンズアルデヒド", ar: "4-ブロモフェニル" },
+    { name: "4-ニトロベンズアルデヒド", ar: "4-ニトロフェニル" },
+    { name: "3,5-ジ-tert-ブチルベンズアルデヒド", ar: "3,5-ジ-tert-ブチルフェニル" },
+    { name: "2-チオフェンカルボキシアルデヒド", ar: "2-チエニル" },
+    { name: "3-(トリイソプロピルシリル)プロピナール", ar: "(トリイソプロピルシリル)エチニル" }
+  ];
+  const METALS = {
+    Ni: { salt: "酢酸ニッケル(II)四水和物", add: "Ni", label: "Ni(II)" },
+    Cu: { salt: "酢酸銅(II)一水和物", add: "Cu", label: "Cu(II)" },
+    Pd: { salt: "酢酸パラジウム(II)", add: "Pd", label: "Pd(II)" },
+    Pt: { salt: "塩化白金(II)", add: "Pt", label: "Pt(II)", extra: "酢酸ナトリウム" },
+    Zn: { salt: "酢酸亜鉛二水和物", add: "Zn", label: "Zn(II)" },
+    Sn: { salt: "塩化スズ(II)二水和物", add: "SnCl2", label: "Sn(IV)Cl2" }
+  };
+  const BOC = "C24H28N2O4", DPB = "C14H12N2";
+
+  const macroFormula = aldFormula => combineFormula([[DPB, 2], [aldFormula, 2], ["H2O", -2], ["H", -4]]);
+  const complexFormula = (macro, metal) => combineFormula([[macro, 1], ["H", -2], [METALS[metal].add, 1]]);
+
+  function porphSteps(o) {
+    const ald = o.ald;
+    const aldFormula = ald.formula || libFormula(ald.name);
+    const macro = macroFormula(aldFormula);
+    const macroName = `meso-ビス(${ald.ar || ald.name})ジベンゾポルフィリン(2.1.2.1)`;
+    const halName = HALIDES[o.halide];
+    const halFormula = libFormula(halName);
+    const halD = +libDensity(halName);
+    const scale = o.scale > 0 ? o.scale : 1;
+    const mw = fm => formulaMW(fm);
+    const r1 = v => String(Math.round(v * 10) / 10);
+    const vol = mL => String(Math.round(scale * mL * 1000));
+    // 例の収量（Boc 体 70%、脱 Boc 90%、環化 20%、金属化 85%）
+    const yBoc = scale * mw(BOC) * 0.70;
+    const yDpb = yBoc / mw(BOC) * mw(DPB) * 0.90;
+    const yMacro = yDpb / mw(DPB) / 2 * mw(macro) * 0.20;
+    const ex = v => o.example ? r1(v) : "";
+
+    const s1 = sheetOf("Boc 体の合成（鈴木–宮浦）", [
+      libRow(halName, { role: "substrate", mode: "volume", amount: String(Math.round(scale * mw(halFormula) / halD)), coef: "1" }),
+      libRow("N-Boc-ピロール-2-ボロン酸", { mode: "equiv", amount: "2.5", coef: "2" }),
+      libRow("Pd(PPh3)4", { role: "catalyst", formula: "Pd(PPh3)4", mode: "equiv", amount: "0.10" }),
+      libRow("炭酸カリウム", { role: "additive", mode: "equiv", amount: "4.0" }),
+      libRow("1,4-ジオキサン", { role: "solvent", mode: "volume", amount: vol(8) }),
+      libRow("水", { role: "solvent", mode: "volume", amount: vol(2) })
+    ], Object.assign(emptyProduct(), { name: "1,2-ビス(N-Boc-ピロール-2-イル)ベンゼン", formula: BOC, mass: ex(yBoc) }), o.example);
+
+    const s2 = sheetOf("脱 Boc", [
+      newRow({ role: "substrate", mode: "mass", link: true, coef: "1" }),
+      libRow("ナトリウムメトキシド", { role: "additive", mode: "equiv", amount: "5.0" }),
+      libRow("テトラヒドロフラン", { role: "solvent", mode: "volume", amount: vol(10) }),
+      libRow("メタノール", { role: "solvent", mode: "volume", amount: vol(5) })
+    ], Object.assign(emptyProduct(), { name: "o-ジピロリルベンゼン", formula: DPB, mass: ex(yDpb) }), o.example);
+
+    const s3 = sheetOf("[2+2] 縮合・DDQ 酸化", [
+      newRow({ role: "substrate", mode: "mass", link: true, coef: "2" }),
+      newRow({ name: ald.name, formula: aldFormula, role: "reagent", mode: "equiv", amount: "1.0", aux: ald.d ? String(ald.d) : libDensity(ald.name), coef: "2" }),
+      libRow("三フッ化ホウ素ジエチルエーテル錯体", { role: "catalyst", mode: "equiv", amount: "0.3" }),
+      libRow("DDQ", { role: "additive", mode: "equiv", amount: "1.5" }),
+      libRow("ジクロロメタン", { role: "solvent", mode: "volume", amount: vol(100) })
+    ], Object.assign(emptyProduct(), { name: macroName, formula: macro, mass: ex(yMacro), note: "分子式は 20π 環状ビス(ジピリン) として計算" }), o.example);
+
+    const steps = [stepOf(s1), stepOf(s2), stepOf(s3)];
+    if (o.metal && METALS[o.metal]) {
+      const M = METALS[o.metal];
+      const complex = complexFormula(macro, o.metal);
+      const rows = [
+        newRow({ role: "substrate", mode: "mass", link: true, coef: "1" }),
+        libRow(M.salt, { role: "reagent", mode: "equiv", amount: "5.0", coef: "1" })
+      ];
+      if (M.extra) rows.push(libRow(M.extra, { role: "additive", mode: "equiv", amount: "10" }));
+      rows.push(libRow("クロロホルム", { role: "solvent", mode: "volume", amount: vol(10) }));
+      rows.push(libRow("メタノール", { role: "solvent", mode: "volume", amount: vol(2) }));
+      const yCx = yMacro / mw(macro) * mw(complex) * 0.85;
+      steps.push(stepOf(sheetOf(`${M.label} 錯体化`, rows, Object.assign(emptyProduct(), {
+        name: `${M.label} 錯体（${macroName}）`, formula: complex, mass: ex(yCx),
+        note: o.metal === "Sn" ? "Sn(IV) の軸配位子は要確認" : ""
+      }), o.example)));
+    }
+    return steps;
+  }
+
+  // 1 反応のテンプレート。量はすべて入力例
   const TEMPLATES = {
     suzuki() {
       const rows = [
-        newRow({ name: "4-ブロモアニソール", role: "substrate", formula: "C7H7BrO", mode: "mass", amount: "187.0" }),
-        newRow({ name: "フェニルボロン酸", role: "reagent", formula: "PhB(OH)2", mode: "equiv", amount: "1.2" }),
-        newRow({ name: "Pd(PPh3)4", role: "catalyst", formula: "Pd(PPh3)4", mode: "equiv", amount: "0.05" }),
-        newRow({ name: "炭酸カリウム", role: "additive", formula: "K2CO3", mode: "equiv", amount: "2.0" }),
-        newRow({ name: "トルエン", role: "solvent", formula: "C7H8", mode: "volume", amount: "5000", aux: "0.867" })
+        libRow("4-ブロモアニソール", { role: "substrate", mode: "mass", amount: "187.0" }),
+        libRow("フェニルボロン酸", { mode: "equiv", amount: "1.2" }),
+        libRow("Pd(PPh3)4", { role: "catalyst", formula: "Pd(PPh3)4", mode: "equiv", amount: "0.05" }),
+        libRow("炭酸カリウム", { role: "additive", mode: "equiv", amount: "2.0" }),
+        libRow("トルエン", { role: "solvent", mode: "volume", amount: "5000" })
       ];
-      return { title: "例: 鈴木–宮浦カップリング", rows, product: Object.assign(emptyProduct(), { name: "4-メトキシビフェニル", formula: "C13H12O", mass: "156.0", purity: "98", note: "白色固体" }) };
+      return sheetOf("鈴木–宮浦カップリング", rows, Object.assign(emptyProduct(), { name: "4-メトキシビフェニル", formula: "C13H12O", mass: "156.0", purity: "98", note: "白色固体" }), true);
     },
-    dipyrrolylbenzene() {
-      const rows = [
-        newRow({ name: "1,2-ジブロモベンゼン", role: "substrate", formula: "C6H4Br2", mode: "volume", amount: "121", aux: "1.956", coef: "1" }),
-        newRow({ name: "N-Boc-ピロール-2-ボロン酸", role: "reagent", formula: "C9H14BNO4", mode: "equiv", amount: "2.5", coef: "2" }),
-        newRow({ name: "Pd(PPh3)4", role: "catalyst", formula: "Pd(PPh3)4", mode: "equiv", amount: "0.10" }),
-        newRow({ name: "炭酸カリウム", role: "additive", formula: "K2CO3", mode: "equiv", amount: "4.0" }),
-        newRow({ name: "1,4-ジオキサン", role: "solvent", formula: "C4H8O2", mode: "volume", amount: "8000", aux: "1.033" })
-      ];
-      return { title: "例: 1,2-ビス(N-Boc-ピロール-2-イル)ベンゼン（ピロール源 2 : ジハロベンゼン 1）", rows,
-        product: Object.assign(emptyProduct(), { name: "1,2-ビス(N-Boc-ピロール-2-イル)ベンゼン", formula: "C24H28N2O4", mass: "290", note: "Boc 除去後に o-ジピロリルベンゼン" }) };
-    },
+    dipyrrolylbenzene() { return porphSteps({ halide: "Br", scale: 1, ald: ALDEHYDES[0], metal: "", example: true })[0].sheet; },
     porph2121() {
-      const rows = [
-        newRow({ name: "o-ジピロリルベンゼン", role: "substrate", formula: "C14H12N2", mode: "mass", amount: "208.3", coef: "2" }),
-        newRow({ name: "ベンズアルデヒド", role: "reagent", formula: "C7H6O", mode: "equiv", amount: "1.0", aux: "1.044", coef: "2" }),
-        newRow({ name: "三フッ化ホウ素ジエチルエーテル錯体", role: "catalyst", formula: "C4H10BF3O", mode: "equiv", amount: "0.3", aux: "1.15" }),
-        newRow({ name: "DDQ", role: "additive", formula: "C8Cl2N2O2", mode: "equiv", amount: "1.5" }),
-        newRow({ name: "ジクロロメタン", role: "solvent", formula: "CH2Cl2", mode: "volume", amount: "100000", aux: "1.326" })
-      ];
-      return { title: "例: ジベンゾポルフィリン(2.1.2.1) の [2+2] 縮合（2 : 2 → 1）", rows,
-        product: Object.assign(emptyProduct(), { name: "meso-ジフェニルジベンゾポルフィリン(2.1.2.1)", formula: "C42H28N4", mass: "58.9", note: "分子式は酸化段階に合わせて確認" }) };
+      const s = porphSteps({ halide: "Br", scale: 1, ald: ALDEHYDES[0], metal: "", example: true })[2].sheet;
+      // 単独で使うときは o-ジピロリルベンゼンを手入力の原料にする
+      Object.assign(s.rows[0], { link: false, name: "o-ジピロリルベンゼン", formula: DPB, amount: "208.3" });
+      s.product.mass = "58.9";
+      return s;
     },
     lindsey() {
       const rows = [
-        newRow({ name: "ピロール", role: "substrate", formula: "C4H5N", mode: "volume", amount: "694", aux: "0.967", coef: "4" }),
-        newRow({ name: "ベンズアルデヒド", role: "reagent", formula: "C7H6O", mode: "equiv", amount: "1.0", aux: "1.044", coef: "4" }),
-        newRow({ name: "三フッ化ホウ素ジエチルエーテル錯体", role: "catalyst", formula: "C4H10BF3O", mode: "equiv", amount: "0.033", aux: "1.15" }),
-        newRow({ name: "DDQ", role: "additive", formula: "C8Cl2N2O2", mode: "equiv", amount: "0.75" }),
-        newRow({ name: "ジクロロメタン", role: "solvent", formula: "CH2Cl2", mode: "volume", amount: "1000000", aux: "1.326" })
+        libRow("ピロール", { role: "substrate", mode: "volume", amount: "694", coef: "4" }),
+        libRow("ベンズアルデヒド", { mode: "equiv", amount: "1.0", coef: "4" }),
+        libRow("三フッ化ホウ素ジエチルエーテル錯体", { role: "catalyst", mode: "equiv", amount: "0.033" }),
+        libRow("DDQ", { role: "additive", mode: "equiv", amount: "0.75" }),
+        libRow("ジクロロメタン", { role: "solvent", mode: "volume", amount: "1000000" })
       ];
-      return { title: "例: Lindsey 法 TPP 合成（ピロール 4 : アルデヒド 4 → 1）", rows,
-        product: Object.assign(emptyProduct(), { name: "テトラフェニルポルフィリン", formula: "C44H30N4", mass: "430", note: "紫色固体" }) };
+      return sheetOf("Lindsey 法 TPP 合成", rows, Object.assign(emptyProduct(), { name: "テトラフェニルポルフィリン", formula: "C44H30N4", mass: "430", note: "紫色固体" }), true);
     },
     dpm() {
       const rows = [
-        newRow({ name: "ベンズアルデヒド", role: "substrate", formula: "C7H6O", mode: "volume", amount: "254", aux: "1.044", coef: "1" }),
-        newRow({ name: "ピロール", role: "reagent", formula: "C4H5N", mode: "equiv", amount: "40", aux: "0.967", coef: "2" }),
-        newRow({ name: "トリフルオロ酢酸", role: "catalyst", formula: "C2HF3O2", mode: "equiv", amount: "0.1", aux: "1.489" })
+        libRow("ベンズアルデヒド", { role: "substrate", mode: "volume", amount: "254", coef: "1" }),
+        libRow("ピロール", { mode: "equiv", amount: "40", coef: "2" }),
+        libRow("トリフルオロ酢酸", { role: "catalyst", mode: "equiv", amount: "0.1" })
       ];
-      return { title: "例: 5-フェニルジピロメタン（ピロール大過剰）", rows,
-        product: Object.assign(emptyProduct(), { name: "5-フェニルジピロメタン", formula: "C15H14N2", mass: "400" }) };
+      return sheetOf("5-フェニルジピロメタン（ピロール大過剰）", rows, Object.assign(emptyProduct(), { name: "5-フェニルジピロメタン", formula: "C15H14N2", mass: "400" }), true);
     }
   };
 
-  function fromTemplate(key) {
-    nextId = 1;
-    const t = TEMPLATES[key]();
-    return Object.assign({ example: true, refId: t.rows[0].id }, t);
+  function newApp(name, steps) { return { name, active: 0, steps, plan: { target: "", unit: "mg" } }; }
+  function defaultApp() {
+    nextId = 1; stepSeq = 1;
+    return newApp("例: Ni-メシチルジベンゾポルフィリン(2.1.2.1) の合成", porphSteps({ halide: "Br", scale: 1, ald: ALDEHYDES[1], metal: "Ni", example: true }));
   }
-
-  function emptyState() {
-    nextId = 1;
-    const rows = [newRow({ role: "substrate" }), newRow({ role: "reagent" })];
-    return { example: false, title: "", refId: rows[0].id, rows, product: emptyProduct() };
-  }
-
   function load() {
-    const s = readJSON(STORE_KEY);
-    if (s && Array.isArray(s.rows) && s.product) {
-      nextId = s.rows.reduce((m, r) => Math.max(m, r.id), 0) + 1;
-      return s;
+    let a = readJSON(APP_KEY);
+    if (!a) {
+      const old = readJSON(OLD_KEY);
+      if (old && Array.isArray(old.rows) && old.product) a = newApp(old.title || "", [{ id: 1, expYield: "", sheet: old }]);
     }
-    return fromTemplate("porph2121");
+    if (a && Array.isArray(a.steps) && a.steps.length) {
+      nextId = 1; stepSeq = 1;
+      for (const st of a.steps) {
+        stepSeq = Math.max(stepSeq, (st.id || 0) + 1);
+        for (const r of st.sheet.rows) nextId = Math.max(nextId, r.id + 1);
+      }
+      a.steps.forEach(st => { if (!st.id) st.id = stepSeq++; });
+      a.active = Math.min(Math.max(a.active || 0, 0), a.steps.length - 1);
+      a.plan = a.plan || { target: "", unit: "mg" };
+      return a;
+    }
+    return defaultApp();
   }
 
-  let state = load();
+  let app = load();
+  let state = app.steps[app.active].sheet;
 
   // ---- 計算 ----
   const num = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : NaN; };
@@ -708,9 +1024,20 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     catch (e) { return { mw: NaN, err: e.message, fromFormula: false }; }
   }
 
-  function compute() {
-    const res = { rows: {}, refMmol: NaN, limitingId: null, minRatio: NaN, messages: [] };
-    const pcoef = pos(state.product.coef, 1);
+  // 「前ステップの生成物」行に、前ステップの生成物の情報を流し込む
+  function resolveRow(r, prevProduct) {
+    if (!r.link) return r;
+    const p = prevProduct || emptyProduct();
+    return Object.assign({}, r, {
+      name: p.name || "前ステップの生成物", formula: p.formula, mw: p.mw, purity: p.purity, mode: "mass",
+      amount: String(r.amount).trim() !== "" ? r.amount : p.mass
+    });
+  }
+
+  function compute(sheet, prevProduct) {
+    const rows = sheet.rows.map(r => resolveRow(r, prevProduct));
+    const res = { rows: {}, resolved: rows, refMmol: NaN, limitingId: null, minRatio: NaN, messages: [] };
+    const pcoef = pos(sheet.product.coef, 1);
 
     function basic(r) {
       const m = resolveMW(r.formula, r.mw);
@@ -724,14 +1051,14 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
       return { mwInfo: m, mmol, mg, ul };
     }
 
-    for (const r of state.rows) if (r.mode !== "equiv") res.rows[r.id] = basic(r);
+    for (const r of rows) if (r.mode !== "equiv") res.rows[r.id] = basic(r);
 
-    const ref = state.rows.find(r => r.id === state.refId);
+    const ref = rows.find(r => r.id === sheet.refId);
     if (!ref) res.messages.push("基準物質を選んでください。");
     else if (ref.mode === "equiv") res.messages.push("基準物質は「当量指定」以外の入力方法にしてください。");
     else res.refMmol = res.rows[ref.id].mmol;
 
-    for (const r of state.rows) {
+    for (const r of rows) {
       if (r.mode !== "equiv") continue;
       const m = resolveMW(r.formula, r.mw);
       const purity = pos(r.purity, 100) / 100;
@@ -741,7 +1068,7 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
       res.rows[r.id] = { mwInfo: m, mmol, mg, ul: d > 0 ? mg / d : NaN };
     }
 
-    for (const r of state.rows) {
+    for (const r of rows) {
       const c = res.rows[r.id];
       c.equiv = c.mmol / res.refMmol;
       c.reactive = REACTIVE.has(r.role);
@@ -752,7 +1079,7 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
       }
     }
 
-    const p = state.product;
+    const p = sheet.product;
     res.pcoef = pcoef;
     res.pmw = resolveMW(p.formula, p.mw);
     res.theoMmol = res.minRatio * pcoef;
@@ -763,15 +1090,20 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     return res;
   }
 
+  function computeAll() {
+    return app.steps.map((st, i) => compute(st.sheet, i > 0 ? app.steps[i - 1].sheet.product : null));
+  }
+
   // ---- 表示 ----
   const $ = id => document.getElementById(id);
   const ok = x => Number.isFinite(x);
   const f = (x, d) => ok(x) ? x.toFixed(d) : "—";
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const fmtNum = x => !ok(x) ? "—" : Math.abs(x) >= 1000 ? x.toFixed(1) : Math.abs(x) >= 1 ? x.toFixed(3).replace(/\.?0+$/, "") : x.toPrecision(3);
+  const fmtMg = mg => !ok(mg) ? "—" : mg >= 1000 ? (mg / 1000).toFixed(3) + " g" : mg.toFixed(1) + " mg";
   function fmtAmount(c) {
     const parts = [];
-    if (ok(c.mg)) parts.push(c.mg >= 1000 ? (c.mg / 1000).toFixed(3) + " g" : c.mg.toFixed(1) + " mg");
+    if (ok(c.mg)) parts.push(fmtMg(c.mg));
     if (ok(c.ul)) parts.push(c.ul >= 1000 ? (c.ul / 1000).toFixed(2) + " mL" : c.ul.toFixed(0) + " µL");
     return parts;
   }
@@ -781,26 +1113,36 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     busy: ["検索中…", ""]
   };
   const srcHTML = src => { const s = SRC_LABEL[src]; return s ? `<span class="src ${s[1]}">${s[0]}</span>` : ""; };
+  const prevProduct = () => app.active > 0 ? app.steps[app.active - 1].sheet.product : null;
+  const NUMIN = 'type="number" inputmode="decimal" step="any" min="0"';
+  const dash = `<span class="sub" style="padding-top:6px">—</span>`;
 
   function rowHTML(r) {
-    const mode = MODES[r.mode];
+    const linked = r.link && app.active > 0;
+    const v = linked ? resolveRow(r, prevProduct()) : r;
+    const mode = MODES[v.mode];
     const p = "r" + r.id + "-";
+    const ro = linked ? "readonly" : "";
+    const prevMass = linked ? (prevProduct().mass || "") : "";
+    const nameCell = linked
+      ? `<span class="name-cell"><input type="text" id="${p}name" value="${esc(v.name)}" readonly aria-label="前ステップの生成物"><button type="button" class="small" data-act="unlink" title="前ステップとのつながりを外して手入力にする">解除</button></span><span class="src link">STEP ${app.active} の生成物（自動）</span>`
+      : `<span class="name-cell"><input type="text" id="${p}name" data-k="name" list="lib-names" autocomplete="off" value="${esc(r.name)}" placeholder="名称（日本語・英語・略号）"><button type="button" class="small" data-act="lookup" title="名称から分子式を検索">検索</button></span>${srcHTML(r.src)}`;
     return `<tr data-id="${r.id}">
-      <td style="text-align:center"><input type="radio" name="ref" id="${p}ref" data-k="ref" ${state.refId === r.id ? "checked" : ""} aria-label="基準物質にする"></td>
-      <td><span class="name-cell"><input type="text" id="${p}name" data-k="name" list="lib-names" autocomplete="off" value="${esc(r.name)}" placeholder="名称（日本語・英語・略号）"><button type="button" class="small" data-act="lookup" title="名称から分子式を検索">検索</button></span>${srcHTML(r.src)}</td>
-      <td><select id="${p}role" data-k="role">${ROLES.map(([v, l]) => `<option value="${v}" ${r.role === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
-      <td><input type="text" class="formula" id="${p}formula" data-k="formula" value="${esc(r.formula)}" placeholder="${r.role === "solvent" ? "任意" : "例 C6H6"}"></td>
-      <td><input type="number" step="any" min="0" class="num" id="${p}mw" data-k="mw" value="${esc(r.mw)}" placeholder="自動"></td>
-      <td><select id="${p}mode" data-k="mode">${Object.entries(MODES).map(([v, m]) => `<option value="${v}" ${r.mode === v ? "selected" : ""}>${m.label}</option>`).join("")}</select></td>
-      <td><span class="with-unit"><input type="number" step="any" min="0" class="num" id="${p}amount" data-k="amount" value="${esc(r.amount)}" placeholder="0"><span>${mode.unit}</span></span></td>
-      <td>${mode.aux ? `<span class="with-unit"><input type="number" step="any" min="0" class="num" id="${p}aux" data-k="aux" value="${esc(r.aux)}" placeholder="${r.mode === "equiv" ? "任意" : "0"}"><span>${mode.aux}</span></span>` : `<span class="sub" style="padding-top:6px">—</span>`}</td>
-      <td>${r.mode === "solution" ? `<span class="sub" style="padding-top:6px">—</span>` : `<input type="number" step="any" min="0" max="100" class="num" id="${p}purity" data-k="purity" value="${esc(r.purity)}" placeholder="100">`}</td>
-      <td>${REACTIVE.has(r.role) ? `<input type="number" step="any" min="0" class="num coef" id="${p}coef" data-k="coef" value="${esc(r.coef)}" placeholder="1">` : `<span class="sub" style="padding-top:6px">—</span>`}</td>
-      <td class="out" data-o="mmol"></td>
-      <td class="out" data-o="equiv"></td>
-      <td class="out" data-o="prod"></td>
-      <td class="out" data-o="amount"></td>
-      <td style="white-space:nowrap"><button type="button" class="icon" data-act="save" title="この行を試薬ライブラリに登録" aria-label="ライブラリに登録" style="color:var(--accent)">＋登録</button><button type="button" class="icon" data-act="del" aria-label="この行を削除">✕</button></td>
+      <td class="c-ref" data-label="基準にする"><input type="radio" name="ref" id="${p}ref" data-k="ref" ${state.refId === r.id ? "checked" : ""} aria-label="基準物質にする"></td>
+      <td class="c-name full" data-label="名称">${nameCell}</td>
+      <td class="c-role" data-label="役割"><select id="${p}role" data-k="role">${ROLES.map(([val, l]) => `<option value="${val}" ${r.role === val ? "selected" : ""}>${l}</option>`).join("")}</select></td>
+      <td class="c-formula" data-label="分子式"><input type="text" class="formula" id="${p}formula" ${linked ? "" : 'data-k="formula"'} value="${esc(v.formula)}" placeholder="${r.role === "solvent" ? "任意" : "例 C6H6"}" ${ro}></td>
+      <td class="c-mw" data-label="MW (g/mol)"><input ${NUMIN} class="num" id="${p}mw" ${linked ? "" : 'data-k="mw"'} value="${esc(v.mw)}" placeholder="自動" ${ro}></td>
+      <td class="c-mode" data-label="入力方法"><select id="${p}mode" data-k="mode" ${linked ? "disabled" : ""}>${Object.entries(MODES).map(([val, m]) => `<option value="${val}" ${v.mode === val ? "selected" : ""}>${m.label}</option>`).join("")}</select></td>
+      <td class="c-amount" data-label="${linked ? "量（空欄で全量）" : "量"}"><span class="with-unit"><input ${NUMIN} class="num" id="${p}amount" data-k="amount" value="${esc(r.amount)}" placeholder="${linked ? (prevMass || "収量未入力") : "0"}"><span>${mode.unit}</span></span></td>
+      <td class="c-aux" data-label="${v.mode === "solution" ? "濃度" : "密度"}">${mode.aux ? `<span class="with-unit"><input ${NUMIN} class="num" id="${p}aux" data-k="aux" value="${esc(r.aux)}" placeholder="${v.mode === "equiv" ? "任意" : "0"}"><span>${mode.aux}</span></span>` : dash}</td>
+      <td class="c-purity" data-label="純度 %">${linked ? `<span class="sub" style="padding-top:6px">${v.purity ? esc(v.purity) : "100"}（前ステップ）</span>` : v.mode === "solution" ? dash : `<input ${NUMIN} max="100" class="num" id="${p}purity" data-k="purity" value="${esc(r.purity)}" placeholder="100">`}</td>
+      <td class="c-coef" data-label="係数">${REACTIVE.has(r.role) ? `<input ${NUMIN} class="num coef" id="${p}coef" data-k="coef" value="${esc(r.coef)}" placeholder="1">` : dash}</td>
+      <td class="out c-mmol" data-label="mmol" data-o="mmol"></td>
+      <td class="out c-equiv" data-label="equiv" data-o="equiv"></td>
+      <td class="out c-prod" data-label="生成物換算 mmol" data-o="prod"></td>
+      <td class="out c-mass" data-label="質量 / 体積" data-o="amount"></td>
+      <td class="c-act" style="white-space:nowrap">${linked ? "" : `<button type="button" class="icon" data-act="save" title="この行を試薬ライブラリに登録" style="color:var(--accent)">＋登録</button>`}<button type="button" class="icon" data-act="del" aria-label="この行を削除">✕</button></td>
     </tr>`;
   }
 
@@ -818,23 +1160,45 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
   }
 
   function renderStatic() {
+    state = app.steps[app.active].sheet;
+    $("route-name").value = app.name || "";
     $("rxn-title").value = state.title || "";
     const p = state.product;
     $("p-name").value = p.name; $("p-formula").value = p.formula; $("p-mw").value = p.mw;
     $("p-mass").value = p.mass; $("p-purity").value = p.purity; $("p-coef").value = p.coef; $("p-note").value = p.note || "";
     setProductSrc(p.src);
+    $("plan-target").value = app.plan.target || "";
+    $("plan-unit").value = app.plan.unit || "mg";
+    $("step-badge").textContent = app.steps.length > 1 ? `STEP ${app.active + 1} · ` : "";
     renderRows();
   }
 
-  function update() {
-    const res = compute();
+  function renderSteps(all) {
+    $("steps").innerHTML = app.steps.map((st, i) => {
+      const y = all[i].yield;
+      return `<button type="button" class="step-tab" role="tab" data-step="${i}" aria-selected="${i === app.active}">
+        <span class="n">STEP ${i + 1}</span><span class="t">${esc(st.sheet.title || "無題のステップ")}</span><span class="y">${ok(y) ? y.toFixed(1) + "%" : "収率 —"}</span></button>`;
+    }).join("") + `<button type="button" class="step-tab step-add" id="step-add" title="ステップを追加"><span class="n">ADD</span><span class="t">＋ ステップ</span><span class="y">前の生成物を原料に</span></button>`;
+  }
 
-    for (const r of state.rows) {
+  function overallYield(all) {
+    const ys = all.map(r => r.yield);
+    return ys.every(y => ok(y) && y > 0) ? ys.reduce((a, y) => a * y / 100, 1) * 100 : NaN;
+  }
+
+  function update() {
+    const all = computeAll();
+    const res = all[app.active];
+    const rowsResolved = res.resolved;
+
+    for (const r of rowsResolved) {
       const tr = document.querySelector(`tr[data-id="${r.id}"]`);
       if (!tr) continue;
       const c = res.rows[r.id];
-      tr.querySelector('[data-k="mw"]').placeholder = c.mwInfo.fromFormula ? c.mwInfo.mw.toFixed(2) : "自動";
-      const fi = tr.querySelector('[data-k="formula"]');
+      const mwIn = $(`r${r.id}-mw`);
+      if (r.link) mwIn.value = ok(c.mwInfo.mw) ? c.mwInfo.mw.toFixed(2) : "";
+      else mwIn.placeholder = c.mwInfo.fromFormula ? c.mwInfo.mw.toFixed(2) : "自動";
+      const fi = $(`r${r.id}-formula`);
       fi.classList.toggle("invalid", !!c.mwInfo.err);
       fi.title = c.mwInfo.err || "";
       tr.classList.toggle("limiting", res.limitingId === r.id);
@@ -848,17 +1212,20 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     }
 
     const msg = res.messages.slice();
-    const bad = state.rows.filter(r => res.rows[r.id].mwInfo.err);
+    const bad = rowsResolved.filter(r => res.rows[r.id].mwInfo.err);
     if (bad.length) msg.push("分子式を読めない行があります: " + bad.map(r => r.name || r.formula).join("、"));
+    const linkRow = app.active > 0 && state.rows.find(r => r.link);
+    if (linkRow && String(linkRow.amount).trim() === "" && !num(prevProduct().mass)) msg.push(`STEP ${app.active} の収量が未入力なので、つながった原料の量が決まりません。`);
     $("reagent-msg").hidden = !msg.length;
     $("reagent-msg").textContent = msg.join(" ");
+    $("btn-link").hidden = !(app.active > 0 && !state.rows.some(r => r.link));
 
     $("p-mw").placeholder = res.pmw.fromFormula ? res.pmw.mw.toFixed(2) : "自動";
     $("p-formula").classList.toggle("invalid", !!res.pmw.err);
     $("p-formula").title = res.pmw.err || "";
 
     // 反応式（係数）
-    const reactants = state.rows.filter(r => REACTIVE.has(r.role));
+    const reactants = rowsResolved.filter(r => REACTIVE.has(r.role));
     const label = (name, i) => esc(name || "化合物 " + (i + 1));
     $("r-equation").innerHTML = reactants.length
       ? reactants.map((r, i) => `<b>${fmtNum(pos(r.coef, 1))}</b> ${label(r.name, i)}`).join(" ＋ ")
@@ -879,25 +1246,40 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
     g.style.width = ok(y) ? Math.min(Math.max(y, 0), 100) + "%" : "0";
     g.classList.toggle("over", ok(y) && y > 100.5);
 
-    const lim = state.rows.find(r => r.id === res.limitingId);
+    const lim = rowsResolved.find(r => r.id === res.limitingId);
     $("r-limiting").textContent = lim ? `${lim.name || lim.formula || "(無名)"}（係数 ${fmtNum(pos(lim.coef, 1))}）` : "—";
-    $("r-theo").textContent = ok(res.theoMmol) ? `${f(res.theoMmol, 3)} mmol / ${f(res.theoMg, 1)} mg` : "—";
-    $("r-actual").textContent = ok(res.actualMmol) ? `${f(res.actualMmol, 3)} mmol / ${f(res.actualMg, 1)} mg` : "—";
+    $("r-theo").textContent = ok(res.theoMmol) ? `${f(res.theoMmol, 3)} mmol / ${fmtMg(res.theoMg)}` : "—";
+    $("r-actual").textContent = ok(res.actualMmol) ? `${f(res.actualMmol, 3)} mmol / ${fmtMg(res.actualMg)}` : "—";
     $("r-pmw").textContent = ok(res.pmw.mw) ? res.pmw.mw.toFixed(2) + " g/mol" : "—";
 
     $("example-note").hidden = !state.example;
-    $("summary").value = summaryText(res);
-    lastRes = res;
-    writeJSON(STORE_KEY, state);
-  }
-  let lastRes = null;
+    $("summary").value = summaryText(state, res, app.active);
 
-  function summaryText(res) {
+    // ルート
+    renderSteps(all);
+    const oy = overallYield(all);
+    $("overall").innerHTML = app.steps.length > 1
+      ? `${app.steps.length} ステップ · 通算収率 <b>${ok(oy) ? oy.toFixed(1) + "%" : "—"}</b>`
+      : "";
+    renderRouteTable(all, oy);
+    renderPlan(all);
+
+    // スマホ下端バー
+    $("mb-step").textContent = (app.steps.length > 1 ? `STEP ${app.active + 1} · ` : "") + (state.title || "無題のステップ") + (app.steps.length > 1 && ok(oy) ? ` · 通算 ${oy.toFixed(1)}%` : "");
+    $("mb-main").textContent = ok(res.theoMmol) ? `理論 ${fmtMg(res.theoMg)} · 実 ${ok(res.actualMg) ? fmtMg(res.actualMg) : "—"}` : "原料の量を入れると理論収量を計算します";
+    $("mb-yield").textContent = ok(y) ? y.toFixed(1) + "%" : "—%";
+
+    lastAll = all;
+    writeJSON(APP_KEY, app);
+  }
+  let lastAll = null;
+
+  function summaryText(sheet, res, index) {
     const lines = [];
-    if (state.title) lines.push(state.title);
-    const reactants = state.rows.filter(r => REACTIVE.has(r.role));
-    if (reactants.length) lines.push("反応式: " + reactants.map(r => `${fmtNum(pos(r.coef, 1))} ${r.name || "?"}`).join(" + ") + ` → ${fmtNum(res.pcoef)} ${state.product.name || "生成物"}`);
-    for (const r of state.rows) {
+    lines.push((app.steps.length > 1 ? `STEP ${index + 1}: ` : "") + (sheet.title || "無題のステップ"));
+    const reactants = res.resolved.filter(r => REACTIVE.has(r.role));
+    if (reactants.length) lines.push("反応式: " + reactants.map(r => `${fmtNum(pos(r.coef, 1))} ${r.name || "?"}`).join(" + ") + ` → ${fmtNum(res.pcoef)} ${sheet.product.name || "生成物"}`);
+    for (const r of res.resolved) {
       const c = res.rows[r.id];
       const id = [r.formula, ok(c.mwInfo.mw) ? "MW " + c.mwInfo.mw.toFixed(2) : ""].filter(Boolean).join(", ");
       const parts = fmtAmount(c);
@@ -906,13 +1288,70 @@ code { font-family: var(--font-num); font-size: 12px; background: var(--sunken);
       if (r.role !== "solvent" && ok(c.equiv)) parts.push(f(c.equiv, 2) + " equiv");
       lines.push(`[${ROLE_LABEL[r.role]}] ${r.name || "(無名)"}${id ? " (" + id + ")" : ""}: ${parts.join(", ") || "—"}`);
     }
-    const p = state.product;
+    const p = sheet.product;
     const pid = [p.formula, ok(res.pmw.mw) ? "MW " + res.pmw.mw.toFixed(2) : ""].filter(Boolean).join(", ");
     const purity = pos(p.purity, 100);
     lines.push(`[生成物] ${p.name || "(無名)"}${pid ? " (" + pid + ")" : ""}: ${ok(num(p.mass)) ? num(p.mass).toFixed(1) + " mg" : "—"}${purity < 100 ? ` (純度 ${purity}%)` : ""}${p.note ? ", " + p.note : ""}`);
-    const lim = state.rows.find(r => r.id === res.limitingId);
+    const lim = res.resolved.find(r => r.id === res.limitingId);
     lines.push(`理論収量 ${ok(res.theoMg) ? f(res.theoMg, 1) + " mg (" + f(res.theoMmol, 3) + " mmol" + (lim ? ", " + (lim.name || "律速試薬") + " 基準" : "") + ")" : "—"} → 収率 ${ok(res.yield) ? res.yield.toFixed(1) + "%" : "—"}`);
     return lines.join("\n");
+  }
+
+  function renderRouteTable(all, oy) {
+    $("route-rows").innerHTML = app.steps.map((st, i) => {
+      const r = all[i];
+      return `<tr data-step="${i}" ${i === app.active ? 'class="limiting"' : ""}>
+        <td data-label="STEP" class="out" style="text-align:left">${i + 1}</td>
+        <td data-label="ステップ名" class="full"><input type="text" id="rs${st.id}-title" data-k="title" value="${esc(st.sheet.title)}" placeholder="ステップ名"></td>
+        <td data-label="生成物" class="full" style="padding-top:11px">${esc(st.sheet.product.name || "—")}<span class="sub" style="font-family:var(--font-num)">${esc(st.sheet.product.formula || "")}</span></td>
+        <td data-label="収量" class="out">${ok(r.actualMg) ? fmtMg(r.actualMg) : "—"}</td>
+        <td data-label="収率" class="out">${ok(r.yield) ? r.yield.toFixed(1) + "%" : "—"}</td>
+        <td data-label="想定収率 %（逆算用）"><input ${NUMIN} max="100" class="num" id="rs${st.id}-exp" data-k="expYield" value="${esc(st.expYield)}" placeholder="${ok(r.yield) ? r.yield.toFixed(1) : "—"}"></td>
+        <td style="white-space:nowrap; text-align:right"><button type="button" class="small" data-act="open">開く</button>${app.steps.length > 1 ? `<button type="button" class="icon" data-act="del" aria-label="このステップを削除">✕</button>` : ""}</td>
+      </tr>`;
+    }).join("");
+    const lines = [(app.name || "合成ルート")];
+    app.steps.forEach((st, i) => {
+      const r = all[i];
+      lines.push(`STEP ${i + 1} ${st.sheet.title || ""}: ${st.sheet.product.name || "生成物"} ${ok(r.actualMg) ? fmtMg(r.actualMg) : "—"}（${ok(r.yield) ? r.yield.toFixed(1) + "%" : "収率 —"}）`);
+    });
+    if (app.steps.length > 1) lines.push(`通算収率 ${ok(oy) ? oy.toFixed(1) + "%" : "—"}`);
+    lines.push("");
+    app.steps.forEach((st, i) => { lines.push(summaryText(st.sheet, all[i], i)); lines.push(""); });
+    $("route-summary").value = lines.join("\n").trim();
+  }
+
+  // 最終生成物の目標量から、各ステップで必要な原料を逆算する
+  function renderPlan(all) {
+    const out = $("plan-out");
+    const target = num(app.plan.target);
+    if (!(target > 0)) { out.innerHTML = `<p class="hint">目標量を入れると、各ステップで必要な原料量を表示します。</p>`; return; }
+    const last = all[all.length - 1];
+    let need = app.plan.unit === "mmol" ? target : target / last.pmw.mw;
+    if (!ok(need)) { out.innerHTML = `<p class="msg">最終生成物の分子式（MW）を入れてください。</p>`; return; }
+    const items = [];
+    let complete = true, firstAmt = "";
+    for (let i = app.steps.length - 1; i >= 0; i--) {
+      const st = app.steps[i], r = all[i];
+      const y = num(st.expYield) > 0 ? num(st.expYield) : r.yield;
+      if (!(y > 0)) { items.unshift(`<li><span class="msg">STEP ${i + 1} の収率がわかりません。収量か想定収率を入れてください。</span></li>`); complete = false; break; }
+      const main = r.resolved.find(x => x.link) || r.resolved.find(x => x.id === st.sheet.refId);
+      if (!main) { complete = false; break; }
+      const c = r.rows[main.id];
+      const mainMmol = need * pos(main.coef, 1) / r.pcoef / (y / 100);
+      const mg = mainMmol * c.mwInfo.mw / (pos(main.purity, 100) / 100);
+      const d = num(main.aux);
+      const vol = (main.mode === "volume" || main.mode === "equiv") && d > 0 ? ` = ${(mg / d).toFixed(0)} µL` : "";
+      const amt = fmtMg(mg) + vol;
+      if (i === 0) firstAmt = amt;
+      items.unshift(`<li><span class="sub">STEP ${i + 1} ${esc(st.sheet.title || "")}（収率 ${y.toFixed(1)}% で計算）</span>${esc(main.name || "原料")}: <span class="amt">${amt}</span> <span class="sub" style="display:inline">(${f(mainMmol, 3)} mmol)</span></li>`);
+      if (i > 0 && !main.link) { items.unshift(`<li><span class="sub">STEP ${i + 1} が前の生成物につながっていないため、それより前は計算していません。</span></li>`); complete = false; break; }
+      need = mainMmol;
+    }
+    const ref0 = all[0].resolved.find(x => x.id === app.steps[0].sheet.refId);
+    out.innerHTML = (complete && ref0 && firstAmt
+      ? `<p class="sub" style="margin:0 0 4px">最初に必要な ${esc(ref0.name || "原料")}</p><p class="big-note" style="margin-bottom:12px">${firstAmt}</p>` : "")
+      + `<ol class="plan">${items.join("")}</ol>`;
   }
 
   // ---- 名称から自動入力 ----
@@ -1021,17 +1460,21 @@ If you cannot identify it with confidence: {"found": false, "note": "理由（�
   $("reagents").addEventListener("click", e => {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const r = rowOf(b);
-    if (b.dataset.act === "del") {
+    const act = b.dataset.act;
+    if (act === "del") {
       const prev = snapshot();
       state.rows = state.rows.filter(x => x.id !== r.id);
       if (state.refId === r.id && state.rows.length) state.refId = state.rows[0].id;
       touched(); renderRows(); update();
-      showToast(`「${r.name || "無名の行"}」を削除しました`, prev);
-    } else if (b.dataset.act === "lookup") {
+      showToast(`「${r.link ? "前ステップの生成物" : r.name || "無名"}」の行を削除しました`, prev);
+    } else if (act === "lookup") {
       b.disabled = true;
       fullLookup(r, true, () => { rerenderRow(r); update(); });
-    } else if (b.dataset.act === "save") {
+    } else if (act === "save") {
       saveToLib(r, true);
+    } else if (act === "unlink") {
+      Object.assign(r, resolveRow(r, prevProduct()), { link: false });
+      rerenderRow(r); update();
     }
   });
   $("btn-add").addEventListener("click", () => {
@@ -1040,7 +1483,13 @@ If you cannot identify it with confidence: {"found": false, "note": "理由（�
     touched(); renderRows(); update();
     $("r" + r.id + "-name").focus();
   });
+  $("btn-link").addEventListener("click", () => {
+    const r = newRow({ role: "substrate", link: true, coef: "1" });
+    state.rows.unshift(r); state.refId = r.id;
+    touched(); renderRows(); update();
+  });
   $("rxn-title").addEventListener("input", e => { state.title = e.target.value; touched(); update(); });
+  $("route-name").addEventListener("input", e => { app.name = e.target.value; update(); });
 
   // ---- イベント: 生成物 ----
   const pmap = { "p-name": "name", "p-formula": "formula", "p-mw": "mw", "p-mass": "mass", "p-purity": "purity", "p-coef": "coef", "p-note": "note" };
@@ -1066,11 +1515,105 @@ If you cannot identify it with confidence: {"found": false, "note": "理由（�
     fullLookup(state.product, false, () => { refreshProduct(); e.target.disabled = state.product.src === "busy"; });
   });
 
+  // ---- ステップ ----
+  function openStep(i) { app.active = i; renderStatic(); update(); }
+  $("steps").addEventListener("click", e => {
+    if (e.target.closest("#step-add")) {
+      const r = newRow({ role: "substrate", link: true, coef: "1" });
+      app.steps.push(stepOf(sheetOf("", [r], emptyProduct(), false)));
+      openStep(app.steps.length - 1);
+      $("rxn-title").focus();
+      return;
+    }
+    const t = e.target.closest("[data-step]");
+    if (t) openStep(+t.dataset.step);
+  });
+  $("route-rows").addEventListener("input", e => {
+    const k = e.target.dataset.k; if (!k) return;
+    const st = app.steps[+e.target.closest("tr").dataset.step];
+    if (k === "title") { st.sheet.title = e.target.value; if (st.sheet === state) $("rxn-title").value = e.target.value; }
+    else st.expYield = e.target.value;
+    const all = computeAll();
+    renderSteps(all); renderPlan(all);
+    writeJSON(APP_KEY, app);
+  });
+  $("route-rows").addEventListener("change", () => update());
+  $("route-rows").addEventListener("click", e => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const i = +b.closest("tr").dataset.step;
+    if (b.dataset.act === "open") { openStep(i); $("h-reagents").scrollIntoView({ behavior: "smooth", block: "start" }); }
+    else if (b.dataset.act === "del") {
+      const prev = snapshot();
+      const removed = app.steps.splice(i, 1)[0];
+      // 先頭を消したら、次のステップの「前ステップの生成物」を手入力の値に置き換える
+      if (i === 0 && app.steps[0]) app.steps[0].sheet.rows.forEach(r => { if (r.link) Object.assign(r, resolveRow(r, removed.sheet.product), { link: false }); });
+      app.active = Math.min(app.active, app.steps.length - 1);
+      renderStatic(); update();
+      showToast(`STEP ${i + 1}「${removed.sheet.title || "無題"}」を削除しました`, prev);
+    }
+  });
+  $("plan-target").addEventListener("input", e => { app.plan.target = e.target.value; renderPlan(lastAll || computeAll()); writeJSON(APP_KEY, app); });
+  $("plan-unit").addEventListener("change", e => { app.plan.unit = e.target.value; renderPlan(lastAll || computeAll()); writeJSON(APP_KEY, app); });
+
+  // ---- ルート作成 ----
+  $("b-ald").innerHTML = ALDEHYDES.map((a, i) => `<option value="${i}">${esc(a.name)}（${esc(a.ar)}）</option>`).join("") + `<option value="custom">その他（名称と分子式を入力）</option>`;
+  $("b-ald").value = "1";
+  $("b-metal").value = "Ni";
+  function builderOpts() {
+    const v = $("b-ald").value;
+    const ald = v === "custom"
+      ? { name: $("b-ald-name").value || "アルデヒド", formula: $("b-ald-formula").value, ar: $("b-ald-name").value || "Ar" }
+      : ALDEHYDES[+v];
+    return { halide: $("b-halide").value, scale: num($("b-scale").value), ald, metal: $("b-metal").value, example: $("b-example").checked };
+  }
+  function renderScheme() {
+    $("b-ald-custom-wrap").hidden = $("b-ald").value !== "custom";
+    const o = builderOpts();
+    try {
+      const aldF = o.ald.formula || libFormula(o.ald.name);
+      const macro = macroFormula(aldF);
+      const parts = [
+        `① ${HALIDES[o.halide]} + 2 N-Boc-ピロール-2-ボロン酸 → Boc 体 <b>${BOC}</b>`,
+        `② 脱 Boc → o-ジピロリルベンゼン <b>${DPB}</b>`,
+        `③ 2 o-ジピロリルベンゼン + 2 ${esc(o.ald.name)} <b>${esc(aldF)}</b> → 環化体 <b>${macro}</b>（MW ${formulaMW(macro).toFixed(2)}）`
+      ];
+      if (o.metal) {
+        const cx = complexFormula(macro, o.metal);
+        parts.push(`④ ${METALS[o.metal].label} 錯体 <b>${cx}</b>（MW ${formulaMW(cx).toFixed(2)}）`);
+      }
+      $("b-scheme").innerHTML = parts.join("<br>");
+      $("b-create").disabled = false;
+    } catch (e) {
+      $("b-scheme").innerHTML = `<span class="msg">アルデヒドの分子式を読めません: ${esc(e.message)}</span>`;
+      $("b-create").disabled = true;
+    }
+  }
+  ["b-halide", "b-ald", "b-metal", "b-ald-name", "b-ald-formula", "b-scale"].forEach(id => $(id).addEventListener("input", renderScheme));
+  function closeBuilder() { $("builder").hidden = true; $("btn-builder").setAttribute("aria-expanded", "false"); }
+  $("btn-builder").addEventListener("click", () => {
+    if (!$("builder").hidden) { closeBuilder(); return; }
+    $("builder").hidden = false;
+    $("btn-builder").setAttribute("aria-expanded", "true");
+    renderScheme();
+    $("builder").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
+  $("b-cancel").addEventListener("click", closeBuilder);
+  $("b-create").addEventListener("click", () => {
+    const prev = snapshot();
+    const o = builderOpts();
+    const steps = porphSteps(o);
+    app = newApp(`${o.metal ? METALS[o.metal].label + " " : ""}${o.ald.ar || o.ald.name} ジベンゾポルフィリン(2.1.2.1) の合成`, steps);
+    app.plan = prev.plan;
+    closeBuilder();
+    renderStatic(); update();
+    showToast(`${steps.length} ステップのルートを作成しました`, prev);
+  });
+
   // ---- 元に戻す・テンプレート ----
-  const snapshot = () => JSON.parse(JSON.stringify(state));
+  const snapshot = () => JSON.parse(JSON.stringify(app));
   let toastTimer = null, undoState = null;
   function showToast(text, prev) {
-    undoState = prev;
+    undoState = prev || null;
     $("toast-text").textContent = text;
     $("toast-undo").hidden = !prev;
     $("toast").hidden = false;
@@ -1079,28 +1622,24 @@ If you cannot identify it with confidence: {"found": false, "note": "理由（�
   }
   $("toast-undo").addEventListener("click", () => {
     if (!undoState) return;
-    state = undoState; undoState = null;
-    nextId = state.rows.reduce((m, r) => Math.max(m, r.id), 0) + 1;
+    app = undoState; undoState = null;
     renderStatic(); update();
     $("toast").hidden = true;
   });
   $("tpl").addEventListener("change", e => {
     const key = e.target.value; if (!key) return;
     const prev = snapshot();
-    state = fromTemplate(key); renderStatic(); update();
+    app.steps[app.active].sheet = TEMPLATES[key]();
+    renderStatic(); update();
     e.target.value = "";
-    showToast("テンプレートを読み込みました（量は入力例です）", prev);
-  });
-  $("btn-clear").addEventListener("click", () => {
-    const prev = snapshot();
-    state = emptyState(); renderStatic(); update();
-    showToast("入力をクリアしました", prev);
+    showToast("このステップにテンプレートを読み込みました（量は入力例です）", prev);
   });
 
   $("btn-copy").addEventListener("click", () => copyText($("summary"), $("copy-status")));
+  $("btn-route-copy").addEventListener("click", () => copyText($("route-summary"), $("route-copy-status")));
   function copyText(area, statusEl) {
     const done = msg => { statusEl.textContent = msg; setTimeout(() => { statusEl.textContent = ""; }, 2500); };
-    const fallback = () => { area.select(); done("選択しました。Ctrl+C / ⌘C でコピーしてください"); };
+    const fallback = () => { area.select(); done("選択しました。長押しでコピーしてください"); };
     try { navigator.clipboard.writeText(area.value).then(() => done("コピーしました"), fallback); }
     catch (err) { fallback(); }
   }
@@ -1119,15 +1658,15 @@ If you cannot identify it with confidence: {"found": false, "note": "理由（�
   }
   propIds.forEach(id => $(id).addEventListener("input", solveProp));
 
-  let ratio = readJSON(RATIO_KEY) || { base: "min", rows: [{ label: "o-ジピロリルベンゼン", value: "208.3", mw: "208.26" }, { label: "ベンズアルデヒド", value: "106.1", mw: "106.12" }, { label: "DDQ", value: "340.5", mw: "227.00" }] };
+  let ratio = readJSON(RATIO_KEY) || { base: "min", rows: [{ label: "o-ジピロリルベンゼン", value: "208.3", mw: "208.26" }, { label: "メシトアルデヒド", value: "148.2", mw: "148.20" }, { label: "DDQ", value: "340.5", mw: "227.00" }] };
   function renderRatioRows() {
     $("ratio-rows").innerHTML = ratio.rows.map((r, i) => `<tr data-i="${i}">
-      <td><input type="text" id="rt${i}-label" data-k="label" value="${esc(r.label)}" placeholder="名称"></td>
-      <td><input type="number" step="any" class="num" id="rt${i}-value" data-k="value" value="${esc(r.value)}" placeholder="0"></td>
-      <td><input type="number" step="any" min="0" class="num" id="rt${i}-mw" data-k="mw" value="${esc(r.mw)}" placeholder="—"></td>
-      <td class="out" data-o="conv"></td>
-      <td class="out" data-o="ratio"></td>
-      <td><button type="button" class="icon" data-act="del" aria-label="この行を削除">✕</button></td>
+      <td data-label="名称" class="full"><input type="text" id="rt${i}-label" data-k="label" value="${esc(r.label)}" placeholder="名称"></td>
+      <td data-label="量"><input type="number" inputmode="decimal" step="any" class="num" id="rt${i}-value" data-k="value" value="${esc(r.value)}" placeholder="0"></td>
+      <td data-label="MW（任意）"><input ${NUMIN} class="num" id="rt${i}-mw" data-k="mw" value="${esc(r.mw)}" placeholder="—"></td>
+      <td class="out" data-label="換算値" data-o="conv"></td>
+      <td class="out" data-label="比" data-o="ratio"></td>
+      <td class="full" style="text-align:right"><button type="button" class="icon" data-act="del" aria-label="この行を削除">✕</button></td>
     </tr>`).join("");
     $("ratio-base").value = ratio.base;
     updateRatio();
@@ -1169,9 +1708,9 @@ If you cannot identify it with confidence: {"found": false, "note": "理由（�
   $("ratio-add").addEventListener("click", () => { ratio.rows.push({ label: "", value: "", mw: "" }); renderRatioRows(); $("rt" + (ratio.rows.length - 1) + "-label").focus(); });
   $("ratio-base").addEventListener("change", e => { ratio.base = e.target.value; updateRatio(); });
   $("ratio-import").addEventListener("click", () => {
-    if (!lastRes) return;
-    const rows = state.rows.filter(r => r.role !== "solvent" && ok(lastRes.rows[r.id].mmol) && lastRes.rows[r.id].mmol > 0)
-      .map(r => ({ label: r.name || r.formula || "(無名)", value: lastRes.rows[r.id].mmol.toFixed(4), mw: "" }));
+    const res = (lastAll || computeAll())[app.active];
+    const rows = res.resolved.filter(r => r.role !== "solvent" && ok(res.rows[r.id].mmol) && res.rows[r.id].mmol > 0)
+      .map(r => ({ label: r.name || r.formula || "(無名)", value: res.rows[r.id].mmol.toFixed(4), mw: "" }));
     if (rows.length) { ratio.rows = rows; ratio.base = "first"; renderRatioRows(); }
   });
 
@@ -1191,28 +1730,29 @@ If you cannot identify it with confidence: {"found": false, "note": "理由（�
     const match = e => !q || norm(e.name).includes(q) || norm(e.aliases).includes(q) || norm(e.formula).includes(q);
     const mine = userLib.filter(match);
     const built = showBuiltin ? BUILTIN.filter(match) : [];
+    const calcMW = e => { const m = libMW(Object.assign({}, e, { mw: "" })); return ok(m) ? m.toFixed(2) : "自動"; };
     const rowsHTML = mine.map(e => `<tr data-lib="${e.id}">
-        <td><input type="text" id="lib${e.id}-name" data-k="name" value="${esc(e.name)}" placeholder="名称"></td>
-        <td><input type="text" id="lib${e.id}-aliases" data-k="aliases" value="${esc(e.aliases)}" placeholder="英語名, 略号"></td>
-        <td><input type="text" class="formula" id="lib${e.id}-formula" data-k="formula" value="${esc(e.formula)}" placeholder="C6H6"></td>
-        <td><input type="number" step="any" min="0" class="num" id="lib${e.id}-mw" data-k="mw" value="${esc(e.mw)}" placeholder="${ok(libMW(Object.assign({}, e, { mw: "" }))) ? libMW(Object.assign({}, e, { mw: "" })).toFixed(2) : "自動"}"></td>
-        <td><input type="number" step="any" min="0" class="num" id="lib${e.id}-d" data-k="d" value="${esc(e.d)}" placeholder="—"></td>
-        <td><input type="number" step="any" min="0" class="num" id="lib${e.id}-c" data-k="c" value="${esc(e.c)}" placeholder="—"></td>
-        <td><input type="number" step="any" min="0" max="100" class="num" id="lib${e.id}-purity" data-k="purity" value="${esc(e.purity)}" placeholder="100"></td>
-        <td><input type="text" id="lib${e.id}-memo" data-k="memo" value="${esc(e.memo)}" placeholder="保管場所・ロットなど"></td>
-        <td><button type="button" class="icon" data-act="del" aria-label="登録を削除">✕</button></td>
+        <td data-label="名称" class="full"><input type="text" id="lib${e.id}-name" data-k="name" value="${esc(e.name)}" placeholder="名称"></td>
+        <td data-label="別名（, 区切り）" class="full"><input type="text" id="lib${e.id}-aliases" data-k="aliases" value="${esc(e.aliases)}" placeholder="英語名, 略号"></td>
+        <td data-label="分子式"><input type="text" class="formula" id="lib${e.id}-formula" data-k="formula" value="${esc(e.formula)}" placeholder="C6H6"></td>
+        <td data-label="MW"><input ${NUMIN} class="num" id="lib${e.id}-mw" data-k="mw" value="${esc(e.mw)}" placeholder="${calcMW(e)}"></td>
+        <td data-label="密度 g/mL"><input ${NUMIN} class="num" id="lib${e.id}-d" data-k="d" value="${esc(e.d)}" placeholder="—"></td>
+        <td data-label="濃度 M"><input ${NUMIN} class="num" id="lib${e.id}-c" data-k="c" value="${esc(e.c)}" placeholder="—"></td>
+        <td data-label="純度 %"><input ${NUMIN} max="100" class="num" id="lib${e.id}-purity" data-k="purity" value="${esc(e.purity)}" placeholder="100"></td>
+        <td data-label="メモ"><input type="text" id="lib${e.id}-memo" data-k="memo" value="${esc(e.memo)}" placeholder="保管場所・ロット"></td>
+        <td class="full" style="text-align:right"><button type="button" class="icon" data-act="del" aria-label="登録を削除">✕</button></td>
       </tr>`).join("")
       + built.map(e => `<tr>
-        <td>${esc(e.name)} <span class="chip builtin">組込み</span></td>
-        <td class="sub">${esc(e.aliases)}</td>
-        <td style="font-family:var(--font-num)">${esc(e.formula)}</td>
-        <td class="out">${f(libMW(e), 2)}</td>
-        <td class="out">${e.d ? e.d : "—"}</td>
-        <td class="out">${e.c ? e.c : "—"}</td>
-        <td class="out">${e.purity ? e.purity : "—"}</td>
+        <td data-label="名称" class="full">${esc(e.name)} <span class="chip builtin">組込み</span></td>
+        <td data-label="別名" class="full sub">${esc(e.aliases)}</td>
+        <td data-label="分子式" style="font-family:var(--font-num)">${esc(e.formula)}</td>
+        <td data-label="MW" class="out">${f(libMW(e), 2)}</td>
+        <td data-label="密度 g/mL" class="out">${e.d ? e.d : "—"}</td>
+        <td data-label="濃度 M" class="out">${e.c ? e.c : "—"}</td>
+        <td data-label="純度 %" class="out">${e.purity ? e.purity : "—"}</td>
         <td></td><td></td>
       </tr>`).join("");
-    $("lib-rows").innerHTML = rowsHTML || `<tr><td colspan="9" class="sub" style="padding:14px 6px">${userLib.length ? "条件に合う試薬はありません。" : "まだ登録はありません。「＋ 試薬を登録」か、仕込み表の各行の「＋登録」から追加できます。"}</td></tr>`;
+    $("lib-rows").innerHTML = rowsHTML || `<tr><td colspan="9" class="sub full" style="padding:14px 6px">${userLib.length ? "条件に合う試薬はありません。" : "まだ登録はありません。「＋ 試薬を登録」か、仕込み表の各行の「＋登録」から追加できます。"}</td></tr>`;
   }
   function saveToLib(src, isRow) {
     if (!String(src.name || "").trim()) { showToast("名称を入れてから登録してください"); return; }
