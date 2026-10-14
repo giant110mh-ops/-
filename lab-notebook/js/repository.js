@@ -111,12 +111,15 @@
       date: todayString(),
       experimenter: '',
       memo: '',
+      // 反応式: 取り込んだ元ファイル（cdxml_original / mol / smiles）と、Ketcher で修正した版（edited_*）を別々に持つ
       scheme: { cdxml_original: null, mol: null, smiles: null },
       reagents: [],
       steps: [],
       text_ja: '',
       text_en: '',
       text_edited: false,
+      text_generated_ja: '',   // 最後に自動生成した文（手順の変更を検知するため）
+      text_generated_en: '',
       created_at: null,
       updated_at: null
     };
@@ -168,7 +171,9 @@
             });
           });
         },
-        get: function (id) { return adapter.get('notes', id); },
+        get: function (id) {
+          return adapter.get('notes', id).then(function (n) { return n ? Object.assign(newNote(), n) : null; });
+        },
         save: function (note) { return saveRecord('notes', note, true); },
         delete: function (id) { return adapter.remove('notes', id); }
       },
