@@ -16,7 +16,7 @@
     { v: 'product', label: '生成物' }
   ];
   var ROLE_LABEL = { limiting: '基準試薬', reagent: '試薬', solvent: '溶媒', product: '生成物' };
-  var MOL_ROLE_LABEL = { reactant: '原料', reagent: '試薬・条件', product: '生成物', structure: '構造' };
+  var MOL_ROLE_LABEL = { reactant: '原料', intermediate: '中間体', reagent: '試薬・条件', product: '生成物', structure: '構造' };
 
   function repo() { return global.Repository; }
 

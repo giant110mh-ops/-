@@ -299,10 +299,27 @@
   function textOf(tEl) {
     var parts = [];
     tEl.querySelectorAll(':scope > s').forEach(function (s) {
-      parts.push({ text: s.textContent, size: Number(s.getAttribute('size')) || 10, bold: (Number(s.getAttribute('face')) & 1) === 1,
-        sub: (Number(s.getAttribute('face')) & 32) === 32, sup: (Number(s.getAttribute('face')) & 64) === 64 });
+      // face のビット: 1=太字, 2=斜体, 32=下付き, 64=上付き, 96(32+64)=化学式（数字だけ下付き）
+      var face = Number(s.getAttribute('face')) || 0;
+      var formula = (face & 96) === 96;
+      parts.push({ text: s.textContent, size: Number(s.getAttribute('size')) || 10, bold: (face & 1) === 1, italic: (face & 2) === 2,
+        formula: formula, sub: !formula && (face & 32) === 32, sup: !formula && (face & 64) === 64 });
     });
     return parts;
+  }
+
+  // t 要素: p は 1 行目のベースライン上の基準点。Justification で左寄せ／中央／右寄せ
+  function textInfo(t) {
+    var p = pt(t.getAttribute('p'));
+    var just = t.getAttribute('Justification') || t.getAttribute('LabelJustification') || 'Left';
+    if (just === 'Auto') just = 'Left';
+    var bb = String(t.getAttribute('BoundingBox') || '').trim().split(/\s+/).map(Number);
+    return {
+      x: p.x, y: p.y, runs: textOf(t),
+      anchor: just === 'Center' ? 'middle' : just === 'Right' ? 'end' : 'start',
+      lineHeight: Number(t.getAttribute('LineHeight')) || null,
+      bbox: bb.length === 4 && bb.every(isFinite) ? { x1: Math.min(bb[0], bb[2]), y1: Math.min(bb[1], bb[3]), x2: Math.max(bb[0], bb[2]), y2: Math.max(bb[1], bb[3]) } : null
+    };
   }
 
   // fragment 要素 → 分子グラフ（略号ノードは中の fragment を展開して分子式に入れる）
@@ -321,11 +338,12 @@
         var inner = n.querySelector(':scope > fragment');
         var tEl = n.querySelector(':scope > t');
         var label = tEl ? textOf(tEl).map(function (s) { return s.text; }).join('') : null;
+        var labelText = tEl ? textInfo(tEl) : null;
         if ((type === 'Fragment' || type === 'Nickname') && inner) {
           // 略号（OMe, Ph, Boc など）: 表示は略号のまま、分子式は中身で数える
           var innerMap = addNodes(inner, true, id);
           idToIndex[id] = innerMap.attachIndex;
-          if (!isInner) drawAtoms.push({ x: p.x, y: p.y, label: label, id: id });
+          if (!isInner) drawAtoms.push({ x: p.x, y: p.y, label: label, labelText: labelText, id: id });
           return;
         }
         var elNum = Number(n.getAttribute('Element') || 6);
@@ -337,7 +355,7 @@
         }
         atoms.push(atom);
         idToIndex[id] = atoms.length - 1;
-        if (!isInner) drawAtoms.push({ x: p.x, y: p.y, label: label, el: el, charge: atom.charge, id: id, index: atoms.length - 1 });
+        if (!isInner) drawAtoms.push({ x: p.x, y: p.y, label: label, labelText: labelText, el: el, charge: atom.charge, id: id, index: atoms.length - 1 });
       });
       var attachIndex = null;
       fEl.querySelectorAll(':scope > b').forEach(function (b) {
@@ -390,10 +408,7 @@
     Array.prototype.forEach.call(doc.getElementsByTagName('t'), function (t) {
       var parent = t.parentNode && t.parentNode.nodeName;
       if (parent === 'n') return;
-      var p = pt(t.getAttribute('p'));
-      var just = t.getAttribute('Justification') || t.getAttribute('CaptionJustification') || 'Left';
-      scene.texts.push({ x: p.x, y: p.y, runs: textOf(t), anchor: just === 'Center' ? 'middle' : just === 'Right' ? 'end' : 'start',
-        lineHeight: Number(t.getAttribute('LineHeight')) || null });
+      scene.texts.push(textInfo(t));
     });
 
     // 矢印（新形式 <arrow>、旧形式 <graphic GraphicType="Line" ArrowType=...>）
@@ -411,6 +426,12 @@
       } else if (type === 'Symbol' && /Plus/.test(g.getAttribute('SymbolType') || '') && bb.length === 4) {
         scene.pluses.push({ x: (bb[0] + bb[2]) / 2, y: (bb[1] + bb[3]) / 2 });
       }
+    });
+
+    // ChemDraw が記録した反応ステップ（原料・生成物の fragment id）
+    scene.steps = Array.prototype.map.call(doc.getElementsByTagName('step'), function (st) {
+      function ids(attr) { return String(st.getAttribute(attr) || '').trim().split(/\s+/).filter(Boolean); }
+      return { reactants: ids('ReactionStepReactants'), products: ids('ReactionStepProducts') };
     });
 
     analyzeScene(scene);
@@ -433,7 +454,7 @@
     var atoms = res.drawAtoms.map(function (d) {
       var label = d.label;
       if (label == null && d.el && d.el !== 'C') label = d.el;
-      return { id: d.id, x: d.x, y: d.y, label: label, charge: d.charge || 0, el: d.el };
+      return { id: d.id, x: d.x, y: d.y, label: label, labelText: d.labelText, charge: d.charge || 0, el: d.el };
     });
     var idx = {};
     atoms.forEach(function (a, i) { idx[a.id] = i; });
@@ -443,6 +464,32 @@
         return { a: idx[b.drawB], b: idx[b.drawE], order: b.order, stereo: b.stereo, doublePos: b.doublePos };
       })
     };
+  }
+
+  // 反応ステップから: 最初の原料 / 中間体 / 最終生成物
+  function roleFromSteps(steps, id) {
+    if (!steps || !steps.length || !id) return null;
+    var asR = steps.some(function (s) { return s.reactants.indexOf(id) !== -1; });
+    var asP = steps.some(function (s) { return s.products.indexOf(id) !== -1; });
+    if (asR && asP) return 'intermediate';
+    if (asR) return 'reactant';
+    if (asP) return 'product';
+    return null; // 矢印の上下の溶媒・試薬など
+  }
+
+  // 矢印が複数あるとき: どの矢印より前か後か、矢印の上下か
+  function roleFromArrows(arrows, cx, cy) {
+    var before = 0, after = 0;
+    for (var i = 0; i < arrows.length; i++) {
+      var a = arrows[i];
+      var dx = a.head.x - a.tail.x, dy = a.head.y - a.tail.y, len2 = dx * dx + dy * dy || 1;
+      var t = ((cx - a.tail.x) * dx + (cy - a.tail.y) * dy) / len2;
+      if (t >= 0 && t <= 1) return 'reagent';
+      if (t < 0) before++; else after++;
+    }
+    if (after === 0) return 'reactant';
+    if (before === 0) return 'product';
+    return 'intermediate';
   }
 
   // 矢印の位置から原料・試薬・生成物を判定し、近くの化合物番号を拾う
@@ -458,7 +505,10 @@
       m.box = { x1: Math.min.apply(null, xs), x2: Math.max.apply(null, xs), y1: Math.min.apply(null, ys), y2: Math.max.apply(null, ys) };
       var cx = (m.box.x1 + m.box.x2) / 2, cy = (m.box.y1 + m.box.y2) / 2;
       m.role = 'structure';
-      if (arrow) {
+      var stepRole = roleFromSteps(scene.steps, m.id);
+      if (stepRole) m.role = stepRole;
+      else if (scene.arrows.length > 1) m.role = roleFromArrows(scene.arrows, cx, cy);
+      else if (arrow) {
         var a = arrow.a;
         var dx = a.head.x - a.tail.x, dy = a.head.y - a.tail.y;
         var t = ((cx - a.tail.x) * dx + (cy - a.tail.y) * dy) / (arrow.len * arrow.len);
@@ -611,6 +661,64 @@
       '" text-anchor="middle" stroke="none">' + html + '</text>';
   }
 
+  // 下付き・上付きは dy でずらし、次の文字で元の高さに戻す（baseline-shift は後続の文字の位置が崩れることがある）
+  function runsToTspans(runs, baseSize) {
+    var segs = [];
+    runs.forEach(function (r) {
+      var size = r.size || baseSize;
+      var style = (r.bold ? ' font-weight="bold"' : '') + (r.italic ? ' font-style="italic"' : '');
+      if (r.formula) {
+        r.text.split(/(\d+)/).filter(Boolean).forEach(function (seg) {
+          segs.push({ text: seg, size: size, style: style, shift: /^\d+$/.test(seg) ? 'sub' : null });
+        });
+      } else {
+        segs.push({ text: r.text, size: size, style: style, shift: r.sub ? 'sub' : r.sup ? 'sup' : null });
+      }
+    });
+    var cur = 0;
+    return segs.map(function (g) {
+      var want = g.shift === 'sub' ? baseSize * 0.28 : g.shift === 'sup' ? -baseSize * 0.38 : 0;
+      var dy = want - cur;
+      cur = want;
+      var size = g.shift ? g.size * 0.72 : g.size;
+      return '<tspan' + g.style + (dy ? ' dy="' + dy.toFixed(2) + '"' : '') + (size !== baseSize ? ' font-size="' + size.toFixed(1) + '"' : '') + '>' + svgEsc(g.text) + '</tspan>';
+    }).join('');
+  }
+
+  // 改行（\r / \n）で行に分ける
+  function splitLines(runs) {
+    var lines = [[]];
+    runs.forEach(function (r) {
+      String(r.text).split(/\r\n|\r|\n/).forEach(function (seg, i) {
+        if (i > 0) lines.push([]);
+        if (seg) lines[lines.length - 1].push(Object.assign({}, r, { text: seg }));
+      });
+    });
+    return lines;
+  }
+
+  function textBlockSvg(t, baseSize) {
+    var lines = splitLines(t.runs);
+    var lh = t.lineHeight && t.lineHeight > 1 ? t.lineHeight : baseSize * 1.15;
+    return lines.map(function (runs, li) {
+      return '<text x="' + t.x.toFixed(2) + '" y="' + (t.y + li * lh).toFixed(2) + '" font-size="' + baseSize +
+        '" text-anchor="' + t.anchor + '" stroke="none">' + runsToTspans(runs, baseSize) + '</text>';
+    }).join('');
+  }
+
+  // 原子 P から Q へ向かう線が、P のラベルの枠を出る位置（P→Q の長さに対する割合）
+  function labelExit(P, Q, fallback) {
+    var bb = P.labelText && P.labelText.bbox;
+    if (!bb) return fallback;
+    var m = 1.2; // 枠の外側に少し余白
+    var x1 = bb.x1 - m, x2 = bb.x2 + m, y1 = bb.y1 - m + 1.5, y2 = bb.y2 + m - 1.5;
+    var dx = Q.x - P.x, dy = Q.y - P.y, t = Infinity;
+    if (dx > 0) t = Math.min(t, (x2 - P.x) / dx); else if (dx < 0) t = Math.min(t, (x1 - P.x) / dx);
+    if (dy > 0) t = Math.min(t, (y2 - P.y) / dy); else if (dy < 0) t = Math.min(t, (y1 - P.y) / dy);
+    if (!isFinite(t) || t < 0) return fallback;
+    return Math.min(t, 0.45);
+  }
+
   function drawMolecule(draw, bondLen) {
     var out = [];
     var size = bondLen * 0.72;
@@ -624,8 +732,10 @@
       if (!A || !B) return;
       var dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy) || 1;
       var ux = dx / len, uy = dy / len;
-      var x1 = A.x + (A.label ? ux * shrink : 0), y1 = A.y + (A.label ? uy * shrink : 0);
-      var x2 = B.x - (B.label ? ux * shrink : 0), y2 = B.y - (B.label ? uy * shrink : 0);
+      var tA = A.label ? labelExit(A, B, shrink / len) : 0;
+      var tB = B.label ? labelExit(B, A, shrink / len) : 0;
+      var x1 = A.x + dx * tA, y1 = A.y + dy * tA;
+      var x2 = B.x - dx * tB, y2 = B.y - dy * tB;
       var nx = -uy, ny = ux;
       function line(ax, ay, bx, by) {
         out.push('<line x1="' + ax.toFixed(2) + '" y1="' + ay.toFixed(2) + '" x2="' + bx.toFixed(2) + '" y2="' + by.toFixed(2) + '"/>');
@@ -692,6 +802,10 @@
 
     atoms.forEach(function (a) {
       if (!a.label) return;
+      if (a.labelText && a.labelText.runs.length) {
+        out.push(textBlockSvg(a.labelText, (a.labelText.runs[0] && a.labelText.runs[0].size) || size));
+        return;
+      }
       out.push(labelSvg(a.label, a.x, a.y, size, a.charge));
     });
     return out.join('');
@@ -723,7 +837,11 @@
     }
     scene.molecules.forEach(function (m) {
       parts.push('<g class="mol">' + drawMolecule(m.draw, bl) + '</g>');
-      m.draw.atoms.forEach(function (a) { grow(a.x, a.y, a.label ? bl * 0.45 : 0); });
+      m.draw.atoms.forEach(function (a) {
+        var bb = a.labelText && a.labelText.bbox;
+        if (bb) { grow(bb.x1, bb.y1); grow(bb.x2, bb.y2); }
+        else grow(a.x, a.y, a.label ? bl * 0.45 : 0);
+      });
     });
     scene.arrows.forEach(function (a) {
       var dx = a.head.x - a.tail.x, dy = a.head.y - a.tail.y, len = Math.hypot(dx, dy) || 1;
@@ -742,28 +860,15 @@
       grow(p.x, p.y, s);
     });
     scene.texts.forEach(function (t) {
-      var lines = [[]];
-      t.runs.forEach(function (r) {
-        var segs = r.text.split(/\r?\n|\r/);
-        segs.forEach(function (seg, i) {
-          if (i > 0) lines.push([]);
-          if (seg) lines[lines.length - 1].push(Object.assign({}, r, { text: seg }));
-        });
-      });
       var size = (t.runs[0] && t.runs[0].size) || 10;
       if (scene.unit !== 'pt') size = bl * 0.6;
-      var lh = t.lineHeight && t.lineHeight > 1 ? t.lineHeight : size * 1.2;
+      parts.push(textBlockSvg(t, size));
+      if (t.bbox) { grow(t.bbox.x1, t.bbox.y1); grow(t.bbox.x2, t.bbox.y2); return; }
+      var lines = splitLines(t.runs);
+      var lh = t.lineHeight && t.lineHeight > 1 ? t.lineHeight : size * 1.15;
       lines.forEach(function (runs, li) {
         var y = t.y + li * lh;
-        var html = runs.map(function (r) {
-          var attrs = r.bold ? ' font-weight="bold"' : '';
-          if (r.sub) attrs += ' baseline-shift="sub" font-size="' + (r.size * 0.75) + '"';
-          else if (r.sup) attrs += ' baseline-shift="super" font-size="' + (r.size * 0.75) + '"';
-          else if (r.size && r.size !== size) attrs += ' font-size="' + r.size + '"';
-          return '<tspan' + attrs + '>' + svgEsc(r.text) + '</tspan>';
-        }).join('');
-        parts.push('<text x="' + t.x.toFixed(2) + '" y="' + y.toFixed(2) + '" font-size="' + size + '" text-anchor="' + t.anchor + '" stroke="none">' + html + '</text>');
-        var w = runs.reduce(function (s, r) { return s + r.text.length; }, 0) * size * 0.55;
+        var w = runs.reduce(function (n, r) { return n + r.text.length; }, 0) * size * 0.55;
         var x0 = t.anchor === 'middle' ? t.x - w / 2 : t.anchor === 'end' ? t.x - w : t.x;
         grow(x0, y - size); grow(x0 + w, y + size * 0.3);
       });
@@ -773,7 +878,7 @@
     minX -= pad; minY -= pad; maxX += pad; maxY += pad;
     var sw = (bl * 0.055).toFixed(3);
     return '<svg xmlns="http://www.w3.org/2000/svg" class="scheme-svg" viewBox="' + [minX, minY, maxX - minX, maxY - minY].map(function (v) { return v.toFixed(2); }).join(' ') +
-      '" preserveAspectRatio="xMidYMid meet" font-family="Arial, Helvetica, sans-serif">' +
+      '" preserveAspectRatio="xMidYMid meet" font-family="Helvetica, Arial, sans-serif">' +
       '<g stroke="currentColor" stroke-width="' + sw + '" stroke-linecap="round" fill="currentColor">' +
       parts.join('').replace(/<line /g, '<line fill="none" ').replace(/class="dash"/g, 'stroke-dasharray="' + (bl * 0.08).toFixed(2) + '"') +
       '</g></svg>';
