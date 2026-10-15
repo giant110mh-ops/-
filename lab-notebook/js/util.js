@@ -231,7 +231,11 @@
   // 他のページに埋め込まれて表示されているか（Artifact など。印刷・ダウンロードが使えない）
   var embedded = (function () { try { return global.self !== global.top; } catch (e) { return true; } })();
 
+  // Artifact の保存で使える拡張子（.cdxml / .mol などは不可）
+  var EMBED_EXT = /\.(txt|json|md|csv|html|svg|pdf|png|zip)$/i;
+
   function download(filename, text, type) {
+    if (embedded) return downloadEmbedded(filename, text);
     var blob = new Blob([text], { type: type || 'text/plain' });
     var url = URL.createObjectURL(blob);
     var a = h('a', { href: url, download: filename });
@@ -239,6 +243,26 @@
     a.click();
     a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  // 埋め込み表示（Artifact）: ビューアーの保存機能を使う。拡張子が許されない形式は .txt を付けて保存する
+  function downloadEmbedded(filename, text) {
+    var use = global.claude && typeof global.claude.use === 'function' ? global.claude.use('downloads') : Promise.resolve(null);
+    return Promise.resolve(use).then(function (dl) {
+      if (!dl) return copyText();
+      var name = EMBED_EXT.test(filename) ? filename : filename + '.txt';
+      return dl.save({ filename: name, data: text }).then(function () {
+        if (name !== filename) toast('保存しました。拡張子の「.txt」を消すと ChemDraw などで開けます', 'success');
+      }, function (err) {
+        if (err && err.code === 'declined') return;
+        return copyText();
+      });
+    });
+    function copyText() {
+      var p = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject();
+      return p.then(function () { toast('ファイルを保存できないため、中身をコピーしました（ChemDraw に貼り付けできます）', 'success'); },
+        function () { toast('この画面ではファイルを保存できません。フォルダ版を使ってください', 'danger'); });
+    }
   }
 
   // 書式付き（太字の化合物番号など）でコピーする。使えない環境ではテキストのみ

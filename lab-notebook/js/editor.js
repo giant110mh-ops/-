@@ -225,7 +225,7 @@
               h('button', { class: 'btn', type: 'button', onclick: function () {
                 if (paste.value.trim()) importScheme(paste.value);
               } }, '貼り付けを取り込む'),
-              h('button', { class: 'btn ghost', type: 'button', onclick: function () {
+              LN.embedded ? null : h('button', { class: 'btn ghost', type: 'button', onclick: function () {
                 LN.ketcher.open('', function (res) { applyKetcherResult(res); });
               } }, 'Ketcher で描く'))));
         return;
@@ -258,7 +258,7 @@
         s.edited_cdxml ? h('button', { class: 'btn small', onclick: function () {
           LN.download('scheme_edited.cdxml', s.edited_cdxml, 'chemical/x-cdxml');
         } }, '修正版 CDXML') : null,
-        h('button', { class: 'btn small', onclick: function () {
+        LN.embedded ? null : h('button', { class: 'btn small', onclick: function () {
           LN.ketcher.open(s.edited_mol || s.cdxml_original || s.mol || s.smiles || '', function (res) { applyKetcherResult(res); });
         } }, 'Ketcher で修正'),
         h('span', { class: 'spacer' }),
