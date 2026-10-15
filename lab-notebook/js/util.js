@@ -209,6 +209,28 @@
     }
   });
 
+  // 確認ダイアログ（window.confirm は埋め込み表示で使えないため、ページ内に出す）
+  // ask(message, { ok: 'ボタン名', danger: true }) → Promise<boolean>
+  function ask(message, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+      var answered = false;
+      LN.openModal({
+        title: opts.title || '確認',
+        body: h('p', { class: 'ask-text' }, message),
+        onClose: function () { if (!answered) resolve(false); },
+        actions: [
+          { spacer: true },
+          { label: opts.cancel || 'キャンセル', kind: 'ghost' },
+          { label: opts.ok || 'OK', kind: opts.danger ? 'danger-solid' : 'primary', onClick: function () { answered = true; resolve(true); } }
+        ]
+      });
+    });
+  }
+
+  // 他のページに埋め込まれて表示されているか（Artifact など。印刷・ダウンロードが使えない）
+  var embedded = (function () { try { return global.self !== global.top; } catch (e) { return true; } })();
+
   function download(filename, text, type) {
     var blob = new Blob([text], { type: type || 'text/plain' });
     var url = URL.createObjectURL(blob);
@@ -260,5 +282,7 @@
   LN.toast = toast;
   LN.openModal = openModal;
   LN.download = download;
+  LN.ask = ask;
+  LN.embedded = embedded;
   LN.copyRich = copyRich;
 })(window);

@@ -229,11 +229,13 @@
     var actions = [];
     if (isEdit) {
       actions.push({ label: '削除', kind: 'danger-ghost', onClick: function (close) {
-        if (!confirm('「' + displayName(it) + '」をライブラリから削除しますか？')) return false;
-        repo().library.delete(it.id).then(function () {
-          LN.toast('削除しました');
-          close();
-          if (opts.onDeleted) opts.onDeleted();
+        LN.ask('「' + displayName(it) + '」をライブラリから削除しますか？', { ok: '削除', danger: true }).then(function (ok) {
+          if (!ok) return;
+          repo().library.delete(it.id).then(function () {
+            LN.toast('削除しました');
+            close();
+            if (opts.onDeleted) opts.onDeleted();
+          });
         });
         return false;
       } });

@@ -92,16 +92,27 @@
 
     function remove() {
       if (!note.id) return;
-      if (!confirm('このノートを削除しますか？この操作は取り消せません。')) return;
-      repo().notes.delete(note.id).then(function () {
-        dirty = false;
-        LN.toast('削除しました');
-        location.hash = '#/notes';
+      LN.ask('このノートを削除しますか？この操作は取り消せません。', { ok: '削除', danger: true }).then(function (ok) {
+        if (!ok) return;
+        repo().notes.delete(note.id).then(function () {
+          dirty = false;
+          LN.toast('削除しました');
+          location.hash = '#/notes';
+        });
       });
     }
 
     function duplicate() {
-      if (dirty && !confirm('保存していない変更があります。現在の内容で複製しますか？（元のノートは保存されません）')) return;
+      if (dirty) {
+        LN.ask('保存していない変更があります。現在の内容で複製しますか？（元のノートは保存されません）', { ok: '複製' }).then(function (ok) {
+          if (ok) doDuplicate();
+        });
+        return;
+      }
+      doDuplicate();
+    }
+
+    function doDuplicate() {
       var copy = JSON.parse(JSON.stringify(note));
       copy.id = null; copy.created_at = null; copy.updated_at = null;
       copy.date = LN.todayString();
@@ -121,7 +132,7 @@
       h('div', { class: 'page-head-right' },
         status, deleteBtn,
         h('button', { class: 'btn ghost', onclick: duplicate, title: '同じ試薬・手順で新しいノートを作る' }, '複製'),
-        h('button', { class: 'btn ghost', onclick: function () { window.print(); } }, '印刷'),
+        LN.embedded ? null : h('button', { class: 'btn ghost', onclick: function () { window.print(); } }, '印刷'),
         h('button', { class: 'btn primary', onclick: save, title: 'Ctrl+S' }, '保存')));
 
     /* ---------- 基本情報 ---------- */
@@ -151,7 +162,14 @@
     function importScheme(text, filename) {
       var res;
       try { res = LN.chem.importText(text, filename); } catch (e) { LN.toast(e.message, 'danger'); return; }
-      if (hasScheme() && !confirm('現在の反応式を置き換えますか？')) return;
+      if (hasScheme()) {
+        LN.ask('現在の反応式を新しいファイルで置き換えますか？', { ok: '置き換える' }).then(function (ok) { if (ok) applyImport(res, text, filename); });
+        return;
+      }
+      applyImport(res, text, filename);
+    }
+
+    function applyImport(res, text, filename) {
       var s = {
         source_format: res.format, source_name: filename || '',
         cdxml_original: res.format === 'cdxml' ? text : null,
@@ -245,10 +263,12 @@
         } }, 'Ketcher で修正'),
         h('span', { class: 'spacer' }),
         h('button', { class: 'btn small danger-ghost', onclick: function () {
-          if (!confirm('反応式をノートから外しますか？')) return;
-          note.scheme = { cdxml_original: null, mol: null, smiles: null };
-          touch();
-          renderScheme();
+          LN.ask('反応式をノートから外しますか？', { ok: '外す', danger: true }).then(function (ok) {
+            if (!ok) return;
+            note.scheme = { cdxml_original: null, mol: null, smiles: null };
+            touch();
+            renderScheme();
+          });
         } }, '反応式を外す'));
 
       var mols = (s.molecules || []).filter(function (m) { return m.role !== 'reagent'; });
@@ -494,9 +514,11 @@
     function deleteRow(r) {
       var used = (note.steps || []).filter(function (s) { return s.params && s.params.reagent === r.id; });
       var msg = '「' + (rowLabel(r) || '名称未入力') + '」を試薬表から削除しますか？' + (used.length ? '\n（この試薬を使う手順が ' + used.length + ' 件あります）' : '');
-      if (!confirm(msg)) return;
-      note.reagents = note.reagents.filter(function (x) { return x !== r; });
-      reagentsChanged(true);
+      LN.ask(msg, { ok: '削除', danger: true }).then(function (ok) {
+        if (!ok) return;
+        note.reagents = note.reagents.filter(function (x) { return x !== r; });
+        reagentsChanged(true);
+      });
     }
 
     function reagentsChanged(rerender) {
@@ -582,10 +604,12 @@
       if (r.library_id) {
         repo().library.get(r.library_id).then(function (it) {
           if (!it) { r.library_id = null; return saveRowToLibrary(r); }
-          if (!confirm('ライブラリの「' + LN.library.displayName(it) + '」をこの行の内容で更新しますか？')) return;
-          Object.assign(it, fields);
-          if (structure && !(it.structure && it.structure.mol)) it.structure = structure;
-          return repo().library.save(it).then(function () { LN.toast('ライブラリを更新しました', 'success'); });
+          return LN.ask('ライブラリの「' + LN.library.displayName(it) + '」をこの行の内容で更新しますか？', { ok: '更新' }).then(function (ok) {
+            if (!ok) return;
+            Object.assign(it, fields);
+            if (structure && !(it.structure && it.structure.mol)) it.structure = structure;
+            return repo().library.save(it).then(function () { LN.toast('ライブラリを更新しました', 'success'); });
+          });
         });
         return;
       }
@@ -753,8 +777,8 @@
     var texts = section('文章',
       h('div', { class: 'row-actions' }, editedChip,
         h('button', { class: 'btn small', onclick: function () {
-          if (note.text_edited && !confirm('手で修正した文章を、手順から生成し直した文章で上書きしますか？')) return;
-          regenerate(true);
+          if (!note.text_edited) { regenerate(true); return; }
+          LN.ask('手で修正した文章を、手順から生成し直した文章で上書きしますか？', { ok: '上書きする', danger: true }).then(function (ok) { if (ok) regenerate(true); });
         } }, '手順から再生成')),
       banner,
       h('div', { class: 'split' },

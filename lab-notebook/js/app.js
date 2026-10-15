@@ -29,9 +29,15 @@
 
   function route() {
     if (ignoreNextHash) { ignoreNextHash = false; currentHash = location.hash; return; }
-    if (leaveGuard && leaveGuard() && !confirm('保存していない変更があります。破棄して移動しますか？')) {
+    if (leaveGuard && leaveGuard()) {
+      var target = location.hash;
       ignoreNextHash = true;
       location.hash = currentHash;
+      LN.ask('保存していない変更があります。破棄して移動しますか？', { ok: '破棄して移動', danger: true }).then(function (ok) {
+        if (!ok) return;
+        leaveGuard = null;
+        location.hash = target;
+      });
       return;
     }
     leaveGuard = null;
